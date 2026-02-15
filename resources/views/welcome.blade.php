@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智慧旅遊規劃系統 - 全功能穩定版</title>
+    <title>AI 智慧旅遊規劃系統 - 旗艦邏輯優化版</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -19,7 +19,8 @@
         .move-btn { opacity: 0.4; transition: opacity 0.2s; }
         .group:hover .move-btn { opacity: 1; }
         
-        /* 💡 解決按鈕看不清：選中狀態強制變深藍色 */
+        /* 💡 模式按鈕：深藍色高亮 */
+        .mode-btn { transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .mode-btn.active { background-color: #2563eb !important; color: white !important; font-weight: 800; border: 2px solid #1e40af; }
         
         .route-label { 
@@ -42,70 +43,71 @@
 <body class="bg-slate-50 font-sans">
 
     <div class="flex h-screen w-full overflow-hidden">
-        <div class="w-80 md:w-96 bg-white shadow-2xl z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
+        <div class="w-80 md:w-[420px] bg-white shadow-2xl z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
             <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                 <h1 class="text-2xl font-bold flex items-center gap-2"><span>🚀</span> AI 旅程大師</h1>
                 <p class="text-blue-100 text-[10px] mt-1">Smart Multi-Mode Planning</p>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+            <div class="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar">
                 
-                <div class="space-y-2 relative">
-                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">🔍 探索景點或地址</label>
+                <div class="space-y-3 relative">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">🔍 探索景點或地址</label>
                     <div class="flex gap-1">
-                        <input type="text" id="pac-input" class="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="輸入名稱或地址後按 Enter">
-                        <button onclick="searchPlace()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">搜尋</button>
+                        <input type="text" id="pac-input" class="flex-1 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="輸入名稱或地址後按 Enter">
+                        <button onclick="searchPlace()" class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-md">搜尋</button>
                     </div>
                     <div id="search-results-panel" class="hidden absolute left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-xl z-30 overflow-y-auto custom-scrollbar"></div>
                 </div>
 
-                <div class="grid grid-cols-5 gap-1">
-                    <button onclick="updateTravelMode('DRIVING')" class="mode-btn p-2 bg-blue-600 text-white rounded-lg text-[9px] font-bold active" id="btn-DRIVING">🚗開車</button>
-                    <button onclick="updateTravelMode('TWO_WHEELER')" class="mode-btn p-2 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold" id="btn-TWO_WHEELER">🛵騎車</button>
-                    <button onclick="updateTravelMode('TRANSIT')" class="mode-btn p-2 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold" id="btn-TRANSIT">🚌轉乘</button>
-                    <button onclick="updateTravelMode('BICYCLING')" class="mode-btn p-2 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold" id="btn-BICYCLING">🚲單車</button>
-                    <button onclick="updateTravelMode('WALKING')" class="mode-btn p-2 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold" id="btn-WALKING">🚶步行</button>
+                <div class="grid grid-cols-5 gap-1.5">
+                    <button onclick="updateTravelMode('DRIVING')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold active" id="btn-DRIVING"><span>🚗</span><span>開車</span></button>
+                    <button onclick="updateTravelMode('TWO_WHEELER')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-TWO_WHEELER"><span>🛵</span><span>騎車</span></button>
+                    <button onclick="updateTravelMode('TRANSIT')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-TRANSIT"><span>🚌</span><span>轉乘</span></button>
+                    <button onclick="updateTravelMode('BICYCLING')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-BICYCLING"><span>🚲</span><span>單車</span></button>
+                    <button onclick="updateTravelMode('WALKING')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-WALKING"><span>🚶</span><span>步行</span></button>
                 </div>
                 
-                <div id="route-toggles" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2 animate-in fade-in">
+                <div id="route-toggles" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 animate-in fade-in">
                     <h3 class="font-bold text-slate-700 text-sm flex justify-between items-center">
                         <span>🗺️ 路徑顯示控制</span>
-                        <label class="flex items-center gap-1 text-[10px] text-blue-600 cursor-pointer hover:text-blue-800 transition">
+                        <label class="flex items-center gap-1 text-[11px] text-blue-600 cursor-pointer hover:text-blue-800 transition">
                             <input type="checkbox" id="toggle-all-routes" checked onchange="toggleAllRoutes(this.checked)" class="accent-blue-600"> 全選
                         </label>
                     </h3>
-                    <div id="route-toggle-list" class="grid grid-cols-2 gap-2 text-[11px]"></div>
+                    <div id="route-toggle-list" class="grid grid-cols-2 gap-3 text-[12px]"></div>
                 </div>
 
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center border-b pb-2">
-                        <h2 class="font-bold text-slate-700 text-sm">📍 行程點清單</h2>
-                        <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold" id="point-count">0 個地點</span>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h2 class="font-bold text-slate-700 text-base">📍 行程點清單</h2>
+                        <span class="text-[11px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold" id="point-count">0 個地點</span>
                     </div>
-                    <div id="itinerary-list" class="space-y-2"></div>
-                    <button onclick="calculateRoute()" id="route-btn" class="hidden w-full bg-emerald-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-emerald-700 shadow-lg transition">
+                    <div id="itinerary-list" class="space-y-3"></div>
+                    <button onclick="calculateRoute()" id="route-btn" class="hidden w-full bg-emerald-600 text-white py-4 rounded-2xl font-extrabold text-base hover:bg-emerald-700 shadow-lg transition transform hover:scale-[1.02]">
                         計算優化路徑
                     </button>
                 </div>
 
-                <div id="ai-suggestion-box" class="hidden p-4 bg-indigo-50 rounded-xl border border-indigo-100 shadow-sm animate-in fade-in duration-500">
-                    <h3 class="text-indigo-800 font-bold text-xs mb-2 flex items-center gap-1">🤖 AI 即時導引指南</h3>
-                    <div id="ai-suggestion-text" class="text-[11px] text-indigo-900 leading-relaxed space-y-3"></div>
+                <div id="ai-suggestion-box" class="hidden p-5 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm animate-in fade-in">
+                    <h3 class="text-indigo-800 font-bold text-[13px] mb-3 flex items-center gap-1">🤖 AI 即時導引與轉乘建議</h3>
+                    <div id="ai-suggestion-text" class="text-[12px] text-indigo-900 leading-relaxed space-y-4"></div>
                 </div>
 
-                <div id="detail-box" class="hidden p-4 bg-white rounded-xl border border-slate-200 shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div id="detail-content" class="text-[11px] leading-relaxed"></div>
+                <div id="detail-box" class="hidden p-5 bg-white rounded-2xl border border-slate-200 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div id="detail-content" class="leading-relaxed"></div>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 relative"><div id="map"></div><button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white p-2 rounded-md shadow-md z-10 text-xs font-bold hover:bg-slate-50 transition">🚦 路況開關</button></div>
+        <div class="flex-1 relative"><div id="map"></div><button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white px-3 py-2 rounded-lg shadow-md z-10 text-[13px] font-bold hover:bg-slate-50 transition border border-slate-200">🚦 即時路況</button></div>
     </div>
 
     <script>
         let map, service, geocoder, directionsService;
         let itinerary = [], markers = [], routeLines = [], routeLabels = [];
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
+        let lastShownDetailId = null;
         const colorPalette = ["#7c3aed", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#06b6d4"];
 
         function initMap() {
@@ -126,8 +128,8 @@
         function renderSearchResults(results) {
             const panel = document.getElementById("search-results-panel"); panel.innerHTML = "";
             results.slice(0, 5).forEach(place => {
-                const div = document.createElement("div"); div.className = "p-3 border-b border-slate-100 hover:bg-blue-50 cursor-pointer flex items-start gap-3 transition";
-                div.innerHTML = `<div class="mt-1 text-lg">📍</div><div class="flex-1 overflow-hidden"><div class="text-sm font-bold truncate">${place.name}</div><div class="text-[10px] text-slate-400 truncate">${place.formatted_address}</div></div>`;
+                const div = document.createElement("div"); div.className = "p-4 border-b border-slate-100 hover:bg-blue-50 cursor-pointer flex items-start gap-3 transition";
+                div.innerHTML = `<div class="mt-1 text-xl">📍</div><div class="flex-1 overflow-hidden"><div class="text-sm font-bold truncate">${place.name}</div><div class="text-[11px] text-slate-400 truncate">${place.formatted_address}</div></div>`;
                 div.onclick = () => { fetchFullDetails(place.place_id); panel.classList.remove("active"); document.getElementById("pac-input").value = ""; };
                 panel.appendChild(div);
             });
@@ -137,17 +139,17 @@
 
         function processNewPlace(place) {
             itinerary.push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0 });
-            updateUI(); showPlaceDetail(itinerary[itinerary.length - 1]); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
+            updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
 
-        function clearAllRoutes() { routeLines.forEach(l => l.setMap(null)); routeLabels.forEach(label => label.setMap(null)); routeLines = []; routeLabels = []; document.getElementById('ai-suggestion-box').classList.add('hidden'); document.getElementById('route-toggles').classList.add('hidden'); visibleLegs.clear(); selectedRoutesMap = {}; }
+        function clearAllRoutes() { routeLines.forEach(l => l.setMap(null)); routeLabels.forEach(l => l.setMap(null)); routeLines = []; routeLabels = []; document.getElementById('ai-suggestion-box').classList.add('hidden'); document.getElementById('route-toggles').classList.add('hidden'); visibleLegs.clear(); selectedRoutesMap = {}; }
 
         function refreshMarkersOnly() {
             markers.forEach(m => m.setMap(null)); markers = []; const counts = {};
             itinerary.forEach((p, index) => {
                 const key = `${p.location.lat().toFixed(6)},${p.location.lng().toFixed(6)}`; let lat = p.location.lat(), lng = p.location.lng();
                 if (counts[key]) { lat += (counts[key] * 0.00022); lng += (counts[key] * 0.00022); counts[key]++; } else { counts[key] = 1; }
-                const glyph = document.createElement('div'); glyph.className = 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white'; glyph.innerText = (index + 1).toString();
+                const glyph = document.createElement('div'); glyph.className = 'bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-base shadow-lg border-2 border-white'; glyph.innerText = (index + 1).toString();
                 markers.push(new google.maps.marker.AdvancedMarkerElement({ map, position: {lat, lng}, content: glyph }));
             });
         }
@@ -175,14 +177,8 @@
 
         async function requestRouteByMode(origin, dest, mode) {
             let apiMode = (mode === 'TWO_WHEELER') ? 'TWO_WHEELER' : mode;
-            let request = {
-                origin: origin, destination: dest,
-                travelMode: google.maps.TravelMode[apiMode] || apiMode,
-                provideRouteAlternatives: true
-            };
-            return new Promise((resolve) => {
-                directionsService.route(request, (res, status) => { if (status === 'OK') resolve(res); else resolve(null); });
-            });
+            let request = { origin: origin, destination: dest, travelMode: google.maps.TravelMode[apiMode] || apiMode, provideRouteAlternatives: true };
+            return new Promise((resolve) => { directionsService.route(request, (res, status) => resolve(status === 'OK' ? res : null)); });
         }
 
         function drawLeg(routes, legIndex) {
@@ -191,11 +187,20 @@
                 const isSel = (rIdx === selectedRoutesMap[legIndex].index);
                 const off = (legIndex * 0.00015) + (rIdx * 0.00005);
                 const pathCoords = route.overview_path.map(c => ({ lat: c.lat() + off, lng: c.lng() + off }));
-                const polyline = new google.maps.Polyline({ 
-                    path: pathCoords, strokeColor: legColor, 
-                    strokeOpacity: isSel ? 1.0 : 0.15, strokeWeight: isSel ? 9 : 5, 
-                    zIndex: isSel ? 100 : 10, map 
-                });
+                
+                const lineOptions = {
+                    path: pathCoords, strokeColor: legColor, strokeOpacity: isSel ? 1.0 : 0.5,
+                    strokeWeight: isSel ? 9 : 5, zIndex: isSel ? 100 : 10, map: map
+                };
+
+                if (isSel) {
+                    lineOptions.icons = [{
+                        icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 4, strokeWeight: 2, fillColor: '#FFFFFF', fillOpacity: 1, strokeColor: '#000000' },
+                        offset: '95%'
+                    }];
+                }
+
+                const polyline = new google.maps.Polyline(lineOptions);
                 polyline.addListener('click', () => { selectedRoutesMap[legIndex].index = rIdx; refreshGraphics(); renderAISuggestions(); });
                 routeLines.push(polyline); polyline.legIndex = legIndex; polyline.routeIndex = rIdx;
                 createRouteLabel(route, legIndex, rIdx);
@@ -206,10 +211,8 @@
             const labelDiv = document.createElement('div');
             const pathPoints = route.overview_path;
             const posStart = pathPoints[Math.floor(pathPoints.length / 4)];
-            const posMid = pathPoints[Math.floor(pathPoints.length / 2)];
-            const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: posMid, content: labelDiv });
+            const marker = new google.maps.marker.AdvancedMarkerElement({ map, position: posStart, content: labelDiv });
             marker.legIndex = legIndex; marker.routeIndex = routeIndex; marker.legData = route.legs[0];
-            marker.posStart = posStart; marker.posMid = posMid;
             routeLabels.push(marker); updateSingleLabel(marker, legIndex);
         }
 
@@ -220,17 +223,21 @@
             const curLeg = marker.legData;
             if (marker.routeIndex === selIdx) {
                 marker.content.className = 'route-label'; marker.content.innerHTML = `<span>${legIndex+1}➔${legIndex+2}</span><span class="text-slate-300">|</span><span>${curLeg.distance.text}</span><span class="text-slate-300">|</span><span class="text-indigo-600">${curLeg.duration.text.replace("mins", "分")}</span>`;
-                marker.position = marker.posStart; marker.zIndex = 500;
+                marker.zIndex = 500;
             } else {
                 const diff = Math.round((curLeg.duration.value - priVal) / 60);
                 marker.content.className = `diff-label ${diff < 0 ? 'diff-faster' : 'diff-slower'}`; marker.content.innerText = diff < 0 ? `省 ${Math.abs(diff)} 分` : (diff > 0 ? `慢 ${diff} 分` : "同時間");
-                marker.position = { lat: marker.posMid.lat() + (marker.routeIndex * 0.00008), lng: marker.posMid.lng() };
                 marker.zIndex = 200; marker.content.onclick = (e) => { e.stopPropagation(); selectedRoutesMap[legIndex].index = marker.routeIndex; refreshGraphics(); renderAISuggestions(); };
             }
         }
 
         function refreshGraphics() { 
-            routeLines.forEach(l => { const isSel = (l.routeIndex === selectedRoutesMap[l.legIndex].index); l.setOptions({ strokeOpacity: isSel ? 1.0 : 0.15, strokeWeight: isSel ? 9 : 5, zIndex: isSel ? 100 : 10 }); }); 
+            routeLines.forEach(l => { 
+                const isSel = (l.routeIndex === selectedRoutesMap[l.legIndex].index); 
+                const newOptions = { strokeOpacity: isSel ? 1.0 : 0.5, strokeWeight: isSel ? 9 : 5, zIndex: isSel ? 100 : 10 };
+                if (isSel) { newOptions.icons = [{ icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 4, strokeWeight: 2, fillColor: '#FFFFFF', fillOpacity: 1, strokeColor: '#000000' }, offset: '95%' }]; } else { newOptions.icons = []; }
+                l.setOptions(newOptions);
+            }); 
             routeLabels.forEach(m => updateSingleLabel(m, m.legIndex)); updateRouteVisibility(); 
         }
 
@@ -252,74 +259,77 @@
                 for (let i = 0; i < itinerary.length - 1; i++) {
                     if (!visibleLegs.has(i) || !selectedRoutesMap[i].result) continue;
                     const leg = selectedRoutesMap[i].result.routes[selectedRoutesMap[i].index].legs[0];
-                    html += `<div class="mb-3 border-b border-indigo-100 pb-2">📍 第 ${i + 1} 段：${itinerary[i].name} ➔ ${itinerary[i+1].name}`;
+                    html += `<div class="mb-4 border-b border-indigo-100 pb-3">📍 第 ${i + 1} 段詳情：${itinerary[i].name} ➔ ${itinerary[i+1].name}`;
                     leg.steps.forEach(step => {
                         const dur = step.duration.text.replace("mins", "分鐘");
                         if (step.travel_mode === 'TRANSIT') {
-                            const line = step.transit.line.short_name || step.transit.line.name;
-                            html += `<div class="transit-step"><span class="text-blue-600 font-bold">🚌 搭乘 ${line}路</span><br><span class="text-[9px] text-slate-500">從 ${step.transit.departure_stop.name} 上車 ➔ 到 ${step.transit.arrival_stop.name} 下車 (約 ${dur})</span></div>`;
-                        } else { html += `<div class="transit-step"><span class="text-slate-600">🚶 ${step.instructions.replace(/Walk to /i, "步行至 ")} (約 ${dur})</span></div>`; }
+                            html += `<div class="transit-step"><span class="text-blue-600 font-extrabold text-[13px]">🚌 搭乘 ${step.transit.line.short_name || step.transit.line.name}</span><br><span class="text-[11px] text-slate-500">於 ${step.transit.departure_stop.name} 上車 (約 ${dur})</span></div>`;
+                        } else { html += `<div class="transit-step"><span class="text-slate-600 text-[12px]">🚶 ${step.instructions.replace(/Walk to /i, "步行至 ")}</span></div>`; }
                     }); html += `</div>`;
                 } box.innerHTML = html || "✅ 已規劃最佳方案。";
-            } else { box.innerHTML = "✅ 路線已優化。可點擊地圖淺色線條對比時間方案。"; }
+            } else { box.innerHTML = "<div class='text-[12px]'>✅ 路線已優化。可點擊地圖淺色線條對比時間。</div>"; }
         }
 
-        // 💡 僅修改此函式：精準嵌入 AI 評論分析邏輯
+        function toggleDetail(index) {
+            const box = document.getElementById('detail-box');
+            if (lastShownDetailId === itinerary[index].id && !box.classList.contains('hidden')) { box.classList.add('hidden'); } 
+            else { showPlaceDetail(itinerary[index]); lastShownDetailId = itinerary[index].id; }
+        }
+
         async function showPlaceDetail(point) {
             const box = document.getElementById('detail-box'); const content = document.getElementById('detail-content'); box.classList.remove('hidden');
             const hour = new Date().getHours(); const types = point.types; 
             let cat = "景點", advice = "環境穩定舒適。";
-
-            if (types.some(t => ['school', 'university'].includes(t))) {
-                cat = "🏫 教育設施"; advice = "⚠️ <b>內部不開放參訪</b>。非學生及教職員禁止進入。";
-            } else if (types.some(t => ['restaurant', 'cafe'].includes(t))) {
-                cat = "🍴 餐飲場所"; if ((hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 19)) advice = "🍴 <b>正值用餐尖峰</b>，建議提早訂位。";
-            }
+            if (types.some(t => ['school', 'university'].includes(t))) { cat = "🏫 教育設施"; advice = "⚠️ 內部不開放參訪。非教職員禁止進入。"; }
+            else if (types.some(t => ['restaurant', 'cafe', 'food'].includes(t))) { cat = "🍴 餐飲場所"; if ((hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 19)) advice = "🍴 <b>正值用餐尖峰</b>，建議提早訂位。"; }
+            else if (types.includes('premise') || types.includes('street_address')) { cat = "🏠 私人區域"; advice = "🤫 <b>私人住宅區</b>。請保持安靜並尊重居民隱私。"; }
             
             let revHtml = ""; if (point.reviews && point.reviews.length > 0) {
-                let p = [], c = []; point.reviews.forEach(r => { 
-                    if (r.rating >= 4 && p.length < 2) p.push(r.text.substring(0, 45)); 
-                    if (r.rating <= 3 && c.length < 2) c.push(r.text.substring(0, 45)); 
-                });
-                revHtml = `<div class="mt-3 grid grid-cols-2 gap-2"><div class="bg-green-50 p-2 rounded border border-green-100 shadow-sm"><p class="text-green-700 font-bold text-[9px] mb-1">✅ 讚點心得</p><ul class="text-[8px] text-green-800 space-y-1">${p.map(x=>`<li>• ${x}...</li>`).join('') || '<li>環境整潔明亮</li>'}</ul></div><div class="bg-red-50 p-2 rounded border border-red-100 shadow-sm"><p class="text-red-700 font-bold text-[9px] mb-1">⚠️ 旅客注意</p><ul class="text-[8px] text-red-800 space-y-1">${c.map(x=>`<li>• ${x}...</li>`).join('') || '<li>無特殊差評</li>'}</ul></div></div>`;
+                let p = [], c = []; point.reviews.forEach(r => { if (r.rating >= 4 && p.length < 2) p.push(r.text.substring(0, 50)); if (r.rating <= 3 && c.length < 2) c.push(r.text.substring(0, 50)); });
+                revHtml = `<div class="mt-4 grid grid-cols-2 gap-3"><div class="bg-green-50 p-3 rounded-xl border border-green-100 shadow-sm"><p class="text-green-700 font-extrabold text-[13px] mb-1.5 flex items-center gap-1">✅ 讚點心得</p><ul class="text-[12px] text-green-800 space-y-1.5">${p.map(x=>`<li>• ${x}...</li>`).join('') || '<li>整體環境整潔</li>'}</ul></div><div class="bg-red-50 p-3 rounded-xl border border-red-100 shadow-sm"><p class="text-red-700 font-extrabold text-[13px] mb-1.5 flex items-center gap-1">⚠️ 旅客注意</p><ul class="text-[12px] text-red-800 space-y-1.5">${c.map(x=>`<li>• ${x}...</li>`).join('') || '<li>無特殊差評</li>'}</ul></div></div>`;
             }
-            
-            content.innerHTML = `
-                ${point.photo ? `<img src="${point.photo}" class="rounded-lg mb-3 w-full h-40 object-cover shadow-sm">` : ''}
-                <div class="text-slate-800 font-bold text-[14px] flex justify-between items-center">
-                    <span>📍 ${point.name}</span>
-                    <span class="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[9px] border border-blue-100 font-bold">${cat}</span>
-                </div>
-                <div class="mt-2 p-2 bg-slate-50 rounded text-slate-600 text-[10px]">🕒 <b>AI 真實提醒：</b>${advice}</div>
-                ${revHtml}`;
+            content.innerHTML = `${point.photo ? `<img src="${point.photo}" class="rounded-2xl mb-4 w-full h-48 object-cover shadow-md">` : ''}<div class="text-slate-800 font-bold text-[17px] flex justify-between items-center px-1"><span>📍 ${point.name}</span><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[11px] border border-blue-100 font-extrabold uppercase tracking-tighter">${cat}</span></div><div class="mt-3 p-4 bg-slate-50 rounded-xl text-slate-600 text-[14px] flex gap-3 border border-slate-100 shadow-sm"><div class="flex-shrink-0 text-lg">🕒</div><div class="flex-1 leading-relaxed"><span class="font-bold text-slate-700">AI 真實提醒：</span><span>${advice}</span></div></div>${revHtml}`;
         }
 
         function updateUI() {
             const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${itinerary.length} 個地點`;
             document.getElementById('route-btn').classList.toggle('hidden', itinerary.length < 2);
-            list.innerHTML = itinerary.map((p, i) => `<div class="bg-white border-l-4 border-blue-500 rounded-lg p-3 shadow-sm flex justify-between items-center group animate-in slide-in-from-left duration-200">
-                <div class="flex-1 overflow-hidden"><p class="text-[10px] text-blue-500 font-bold">站點 ${i+1}</p><p class="font-bold text-slate-800 text-sm truncate">${p.name}</p></div>
-                <div class="flex items-center gap-1">
-                    <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-400 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                    <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-400 hover:text-blue-600 ${i === itinerary.length-1 ? 'invisible' : ''}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                    <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
-                </div></div>`).join('');
+            list.innerHTML = itinerary.map((p, i) => `<div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center group animate-in slide-in-from-left duration-200">
+                <div class="flex-1 overflow-hidden">
+                    <p class="text-[11px] text-blue-500 font-bold uppercase tracking-wider">站點 ${i+1}</p>
+                    <div class="flex items-center gap-2"><p class="font-bold text-slate-800 text-[15px] truncate">${p.name}</p><button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button></div>
+                </div>
+                <div class="flex items-center gap-1.5"><button onclick="moveItem(${i}, -1)" class="move-btn p-1.5 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button onclick="moveItem(${i}, 1)" class="move-btn p-1.5 text-slate-300 hover:text-blue-600 ${i === itinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1.5 ml-1">✕</button></div>
+            </div>`).join('');
         }
 
         function moveItem(index, direction) { const target = index + direction; if (target < 0 || target >= itinerary.length) return; const temp = itinerary[index]; itinerary[index] = itinerary[target]; itinerary[target] = temp; updateUI(); refreshMarkersOnly(); if (routeLines.length > 0) calculateRoute(); }
-        function removeItem(id) { itinerary = itinerary.filter(p => p.id !== id); updateUI(); refreshMarkersOnly(); clearAllRoutes(); if (itinerary.length >= 2) calculateRoute(); }
         
-        function updateTravelMode(mode) { 
-            currentMode = mode; 
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active', 'bg-blue-600', 'text-white')); 
-            document.getElementById(`btn-${mode}`).classList.add('active'); 
-            if (itinerary.length >= 2) calculateRoute(); 
+        // 💡 補強修正：當站點剩餘小於 2 時，執行 clearAllRoutes() 清空地圖殘留圖示
+        function removeItem(id) { 
+            itinerary = itinerary.filter(p => p.id !== id); 
+            updateUI(); 
+            refreshMarkersOnly(); 
+            if (itinerary.length >= 2) {
+                calculateRoute(); 
+            } else {
+                clearAllRoutes(); 
+            }
         }
 
+        function updateTravelMode(mode) { currentMode = mode; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${mode}`).classList.add('active'); if (itinerary.length >= 2) calculateRoute(); }
         function toggleTraffic() { map.setOptions({ trafficLayer: !map.get('trafficLayer') }); }
-        function updateRouteToggleUI() { const list = document.getElementById('route-toggle-list'); list.innerHTML = ''; for(let i=0; i < itinerary.length - 1; i++) list.innerHTML += `<label class="flex items-center gap-1 cursor-pointer bg-white p-1.5 rounded border border-slate-100 shadow-sm hover:bg-slate-50 transition"><input type="checkbox" checked onchange="toggleLeg(${i}, this.checked)" class="cursor-pointer"><span class="font-bold truncate" style="color:${colorPalette[i % colorPalette.length]}">段落 ${i+1}➔${i+2}</span></label>`; }
-        function toggleLeg(idx, checked) { if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); updateRouteVisibility(); renderAISuggestions(); }
+        
+        function toggleLeg(idx, checked) { 
+            if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); 
+            const totalLegs = itinerary.length - 1;
+            const allChecked = visibleLegs.size === totalLegs && totalLegs > 0;
+            document.getElementById('toggle-all-routes').checked = allChecked;
+            updateRouteVisibility(); renderAISuggestions(); 
+        }
+
         function toggleAllRoutes(checked) { document.querySelectorAll('#route-toggle-list input[type="checkbox"]').forEach(cb => cb.checked = checked); if (checked) for(let i=0; i < itinerary.length - 1; i++) visibleLegs.add(i); else visibleLegs.clear(); updateRouteVisibility(); renderAISuggestions(); }
+        function updateRouteToggleUI() { const list = document.getElementById('route-toggle-list'); list.innerHTML = ''; for(let i=0; i < itinerary.length - 1; i++) list.innerHTML += `<label class="flex items-center gap-1.5 cursor-pointer bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:bg-slate-50 transition"><input type="checkbox" checked onchange="toggleLeg(${i}, this.checked)" class="cursor-pointer accent-blue-600"><span class="font-bold truncate" style="color:${colorPalette[i % colorPalette.length]}">段落 ${i+1}➔${i+2}</span></label>`; }
         function updateRouteVisibility() { routeLines.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); routeLabels.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); }
         window.onload = initMap;
     </script>
