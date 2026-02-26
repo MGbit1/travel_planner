@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <title>AI 智慧旅遊規劃系統 - 多天數旗艦版</title>
+=======
+    <title>AI 智慧旅遊規劃系統 - 機車路況終極版</title>
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -114,6 +118,7 @@
 
     <script>
         let map, service, geocoder, directionsService, trafficLayer;
+<<<<<<< HEAD
         
         // 💡 多天數資料結構：Key 是天數 (1, 2...)，Value 是該天的地點陣列
         let itineraryData = { 1: [] };
@@ -121,6 +126,9 @@
         let dayCount = 1;
 
         let markers = [], routeLines = [], routeLabels = [];
+=======
+        let itinerary = [], markers = [], routeLines = [], routeLabels = [];
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
         let lastShownDetailId = null;
         const colorPalette = ["#7c3aed", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#06b6d4"];
@@ -130,7 +138,12 @@
             service = new google.maps.places.PlacesService(map); geocoder = new google.maps.Geocoder(); directionsService = new google.maps.DirectionsService();
             
             trafficLayer = new google.maps.TrafficLayer();
+<<<<<<< HEAD
             
+=======
+            // trafficLayer.setMap(map); 
+
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             const input = document.getElementById("pac-input");
             input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); searchPlace(); } });
             const autocomplete = new google.maps.places.Autocomplete(input, { fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] });
@@ -203,6 +216,7 @@
         function fetchFullDetails(placeId) { service.getDetails({ placeId, fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] }, (place, status) => { if (status === 'OK') processNewPlace(place); }); }
 
         function processNewPlace(place) {
+<<<<<<< HEAD
             // 💡 修改：將地點推入 "當前天數" 的陣列
             itineraryData[currentDay].push({ 
                 id: Date.now(), 
@@ -215,6 +229,9 @@
                 user_ratings_total: place.user_ratings_total || 0, 
                 note: "" 
             });
+=======
+            itinerary.push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0, note: "" });
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
 
@@ -240,7 +257,11 @@
             const aiBox = document.getElementById('ai-suggestion-box'), aiText = document.getElementById('ai-suggestion-text');
             aiBox.classList.remove('hidden'); aiText.innerHTML = `正在計算 Day ${currentDay} 最佳路徑...`;
 
+<<<<<<< HEAD
             for(let i=0; i < currentItinerary.length - 1; i++) { visibleLegs.add(i); selectedRoutesMap[i] = { index: 0, result: null }; }
+=======
+            for(let i=0; i < itinerary.length - 1; i++) { visibleLegs.add(i); selectedRoutesMap[i] = { index: 0, result: null }; }
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             updateRouteToggleUI(); 
             
             for (let i = 0; i < currentItinerary.length - 1; i++) {
@@ -255,7 +276,9 @@
             renderAISuggestions(); updateRouteVisibility(); checkOptimalRouteSuggestion();
         }
 
+        // 💡 終極修改核心：requestRouteByMode
         async function requestRouteByMode(origin, dest, mode) {
+<<<<<<< HEAD
             let apiMode = google.maps.TravelMode[mode] || mode;
             let request = { origin: origin, destination: dest, travelMode: apiMode, provideRouteAlternatives: true };
             
@@ -265,21 +288,54 @@
                 request.avoidHighways = true;
             }
 
+=======
+            // 預設模式
+            let apiMode = google.maps.TravelMode[mode] || mode;
+            let request = { 
+                origin: origin, 
+                destination: dest, 
+                travelMode: apiMode, 
+                provideRouteAlternatives: true 
+            };
+            
+            // 💡 關鍵變更：若是機車模式，我們 "欺騙" API 說是開車 (DRIVING)
+            // 這樣才能拿到路況數據 (duration_in_traffic)
+            if (mode === 'TWO_WHEELER') {
+                request.travelMode = google.maps.TravelMode.DRIVING;
+                request.avoidHighways = true; // 但加上這個，確保走省道/平面
+                request.avoidTolls = true;    // 雙重保險避開快速道路
+            }
+
+            // 💡 現在機車 (偽裝成 DRIVING) 和 真正的 DRIVING 都可以請求路況了
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             if (mode === 'DRIVING' || mode === 'TWO_WHEELER') {
                 request.drivingOptions = {
                     departureTime: new Date(),
                     trafficModel: google.maps.TrafficModel.BEST_GUESS
                 };
             }
+<<<<<<< HEAD
+=======
+            
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             return new Promise((resolve) => { directionsService.route(request, (res, status) => resolve(status === 'OK' ? res : null)); });
         }
 
         function getTrafficColor(route, defaultColor) {
+<<<<<<< HEAD
             if (route.legs[0].duration_in_traffic) {
                 const ratio = route.legs[0].duration_in_traffic.value / route.legs[0].duration.value;
                 if (ratio > 1.25) return '#ef4444'; 
                 if (ratio > 1.0) return '#f59e0b';  
                 return '#10b981';                   
+=======
+            // 💡 判斷變色：只要有 duration_in_traffic 就變色 (現在機車也有了)
+            if (route.legs[0].duration_in_traffic) {
+                const ratio = route.legs[0].duration_in_traffic.value / route.legs[0].duration.value;
+                if (ratio > 1.25) return '#ef4444'; // 紅
+                if (ratio > 1.0) return '#f59e0b';  // 橘
+                return '#10b981';                   // 綠
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             }
             return defaultColor;
         }
@@ -290,6 +346,11 @@
                 const isSel = (rIdx === selectedRoutesMap[legIndex].index);
                 const off = (legIndex * 0.00015) + (rIdx * 0.00005);
                 const pathCoords = route.overview_path.map(c => ({ lat: c.lat() + off, lng: c.lng() + off }));
+<<<<<<< HEAD
+=======
+                
+                // 💡 繪製時會調用 getTrafficColor
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
                 const strokeColor = isSel ? getTrafficColor(route, legColor) : legColor;
 
                 const lineOptions = {
@@ -306,7 +367,13 @@
                 }
 
                 const polyline = new google.maps.Polyline(lineOptions);
+<<<<<<< HEAD
                 polyline.originalColor = legColor; polyline.routeData = route; 
+=======
+                polyline.originalColor = legColor; 
+                polyline.routeData = route; 
+                
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
                 polyline.addListener('click', () => { selectedRoutesMap[legIndex].index = rIdx; refreshGraphics(); renderAISuggestions(); });
                 routeLines.push(polyline); polyline.legIndex = legIndex; polyline.routeIndex = rIdx;
                 createRouteLabel(route, legIndex, rIdx);
@@ -330,6 +397,11 @@
             if (marker.routeIndex === selIdx) {
                 let timeText = curLeg.duration.text.replace("mins", "分");
                 let colorClass = "text-indigo-600";
+<<<<<<< HEAD
+=======
+                
+                // 💡 修正：現在機車也有 duration_in_traffic 了
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
                 if (curLeg.duration_in_traffic) {
                     timeText = curLeg.duration_in_traffic.text.replace("mins", "分");
                     const ratio = curLeg.duration_in_traffic.value / curLeg.duration.value;
@@ -337,6 +409,10 @@
                     else if (ratio > 1.0) colorClass = "text-amber-600 font-black";
                     else colorClass = "text-emerald-600 font-black";
                 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
                 marker.content.className = 'route-label'; 
                 marker.content.innerHTML = `<span>${legIndex+1}➔${legIndex+2}</span><span class="text-slate-300">|</span><span>${curLeg.distance.text}</span><span class="text-slate-300">|</span><span class="${colorClass}">${timeText}</span>`;
                 marker.zIndex = 500;
@@ -427,8 +503,12 @@
         }
 
         function editNote(id) {
+<<<<<<< HEAD
             const currentItinerary = itineraryData[currentDay];
             const item = currentItinerary.find(p => p.id === id);
+=======
+            const item = itinerary.find(p => p.id === id);
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
             if (item) {
                 const newNote = prompt(`為「${item.name}」加上個人備註（例如：買伴手禮、必吃滷肉飯）：`, item.note || "");
                 if (newNote !== null) { item.note = newNote; updateUI(); }
@@ -436,6 +516,7 @@
         }
 
         function updateUI() {
+<<<<<<< HEAD
             const currentItinerary = itineraryData[currentDay]; // 💡 UI 只渲染當天
             const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`;
             document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
@@ -447,6 +528,11 @@
             }
 
             list.innerHTML = currentItinerary.map((p, i) => `
+=======
+            const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${itinerary.length} 個地點`;
+            document.getElementById('route-btn').classList.toggle('hidden', itinerary.length < 2);
+            list.innerHTML = itinerary.map((p, i) => `
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
                 <div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center group animate-in slide-in-from-left duration-200">
                     <div class="flex-1 overflow-hidden">
                         <p class="text-[11px] text-blue-500 font-bold uppercase tracking-wider">站點 ${i+1}</p>
@@ -463,6 +549,7 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                         </button>
                         <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<<<<<<< HEAD
                         <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                         <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
                     </div>
@@ -500,6 +587,21 @@
             }
         }
 
+=======
+                        <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === itinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                        <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function moveItem(index, direction) { const target = index + direction; if (target < 0 || target >= itinerary.length) return; const temp = itinerary[index]; itinerary[index] = itinerary[target]; itinerary[target] = temp; updateUI(); refreshMarkersOnly(); if (routeLines.length > 0) calculateRoute(); }
+        function removeItem(id) { itinerary = itinerary.filter(p => p.id !== id); updateUI(); refreshMarkersOnly(); if (itinerary.length >= 2) { calculateRoute(); } else { clearAllRoutes(); } }
+        function toggleTraffic() { if (trafficLayer.getMap()) { trafficLayer.setMap(null); } else { trafficLayer.setMap(map); } }
+        function updateTravelMode(mode) { currentMode = mode; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${mode}`).classList.add('active'); if (itinerary.length >= 2) calculateRoute(); }
+        function toggleLeg(idx, checked) { if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); const totalLegs = itinerary.length - 1; const allChecked = visibleLegs.size === totalLegs && totalLegs > 0; document.getElementById('toggle-all-routes').checked = allChecked; updateRouteVisibility(); renderAISuggestions(); }
+        function toggleAllRoutes(checked) { document.querySelectorAll('#route-toggle-list input[type="checkbox"]').forEach(cb => cb.checked = checked); if (checked) for(let i=0; i < itinerary.length - 1; i++) visibleLegs.add(i); else visibleLegs.clear(); updateRouteVisibility(); renderAISuggestions(); }
+        function updateRouteToggleUI() { const list = document.getElementById('route-toggle-list'); list.innerHTML = ''; for(let i=0; i < itinerary.length - 1; i++) list.innerHTML += `<label class="flex items-center gap-1.5 cursor-pointer bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:bg-slate-50 transition"><input type="checkbox" checked onchange="toggleLeg(${i}, this.checked)" class="cursor-pointer accent-blue-600"><span class="font-bold truncate" style="color:${colorPalette[i % colorPalette.length]}">段落 ${i+1}➔${i+2}</span></label>`; }
+>>>>>>> 9151fe2bffc651051e05b8dfa4f05b777e1a90e4
         function updateRouteVisibility() { routeLines.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); routeLabels.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); }
         window.onload = initMap;
     </script>
