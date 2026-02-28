@@ -79,6 +79,19 @@
                     <button onclick="updateTravelMode('BICYCLING')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-BICYCLING"><span>🚲</span><span>單車</span></button>
                     <button onclick="updateTravelMode('WALKING')" class="mode-btn p-3 bg-slate-100 text-slate-600 rounded-xl text-[13px] font-bold" id="btn-WALKING"><span>🚶</span><span>步行</span></button>
                 </div>
+
+                <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-3 my-4 animate-in fade-in">
+                    <label class="text-[11px] font-bold text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                        <span class="text-base">🤖</span> AI 智慧行程助手
+                    </label>
+                    <textarea id="ai-chat-prompt" rows="2" 
+                        class="w-full border border-indigo-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none custom-scrollbar" 
+                        placeholder="試著輸入：我明天有 5 小時，想在台中看海＋吃甜點..."></textarea>
+                    <button onclick="askAIForItinerary()" id="ai-gen-btn" 
+                        class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md flex justify-center items-center gap-2">
+                        <span id="ai-btn-icon">✨</span> <span id="ai-btn-text">生成建議行程</span>
+                    </button>
+                </div>
                 
                 <div id="route-toggles" class="hidden bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3 animate-in fade-in">
                     <h3 class="font-bold text-slate-700 text-sm flex justify-between items-center">
@@ -141,9 +154,7 @@
             renderDayTabs(); updateUI(); 
         }
 
-        // 💡 呼叫後端 API 存檔的魔法函式
         async function saveFullTrip() {
-            // 檢查有沒有行程
             let hasPoints = false;
             for (let day in itineraryData) {
                 if (itineraryData[day].length > 0) hasPoints = true;
@@ -158,14 +169,12 @@
 
             const payload = {
                 title: title,
-                itinerary_data: itineraryData // 把多天數行程打包送出
+                itinerary_data: itineraryData 
             };
 
-            // 取得頁面上方的安全權杖
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
             try {
-                // 發送 POST 請求給 Laravel 路由 /trips
                 const response = await fetch('/trips', {
                     method: 'POST',
                     headers: {
@@ -373,6 +382,76 @@
                         <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
                     </div>
                 </div>`).join('');
+        }
+
+        // 🤖 植入的 AI 對話發送與處理邏輯
+        async function askAIForItinerary() {
+            const promptValue = document.getElementById('ai-chat-prompt').value;
+            if (!promptValue) return alert("請輸入您的想法喔！");
+
+            const btn = document.getElementById('ai-gen-btn');
+            const btnText = document.getElementById('ai-btn-text');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            btnText.innerText = "AI 正在規劃中...";
+
+            try {
+                const response = await fetch('/ai-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ prompt: promptValue, mode: currentMode })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    // 💡 將 AI 建議回填到當前天數的行程，同時顯示「車程」與「停留時間」
+                    itineraryData[currentDay] = data.suggestions.map((item, index) => {
+                        // 判斷是否為第一站 (出發點)
+                        let isFirstStop = index === 0;
+                        
+                        // 讀取 AI 產生的各項數據
+                        let travel = isFirstStop ? '📍 出發點' : (item.travel_time ? `🚗 車程 ${item.travel_time}` : '');
+                        let stay = item.stay_time ? `⏱️ 停留 ${item.stay_time}` : '';
+                        let cost = item.cost_estimate ? `💰 ${item.cost_estimate}` : '';
+                        let reason = item.reason ? `💡 ${item.reason}` : '';
+                        
+                        // 組合備註字串 (用 filter 巧妙地把空字串濾掉，並用 ｜ 隔開)
+                        let richNote = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+
+                        return {
+                            id: Date.now() + index,
+                            name: item.name,
+                            location: new google.maps.LatLng(item.lat, item.lng),
+                            note: richNote,
+                            rating: 5,
+                            types: ['tourist_attraction'],
+                            reviews: []
+                        };
+                    });
+
+                    updateUI(); // 更新清單介面
+                    refreshMarkersOnly(); // 更新地圖圖標
+                    
+                    document.getElementById('ai-suggestion-box').classList.remove('hidden');
+                    document.getElementById('ai-suggestion-text').innerHTML = `<p class="italic text-indigo-700">「${data.ai_message}」</p>`;
+                    
+                    alert("✨ AI 已為您產生專屬行程！");
+                } else {
+                    alert("❌ AI 規劃失敗：" + (data.message || "請檢查 API 設定"));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("🚨 連線異常，請確認 Laravel 伺服器運作中");
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+                btnText.innerText = "生成建議行程";
+            }
         }
 
         function moveItem(index, direction) { const currentItinerary = itineraryData[currentDay]; const target = index + direction; if (target < 0 || target >= currentItinerary.length) return; const temp = currentItinerary[index]; currentItinerary[index] = currentItinerary[target]; currentItinerary[target] = temp; updateUI(); refreshMarkersOnly(); if (routeLines.length > 0) calculateRoute(); }
