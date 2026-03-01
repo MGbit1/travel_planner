@@ -121,10 +121,7 @@
                     <div id="ai-suggestion-text" class="text-[12px] text-indigo-900 leading-relaxed space-y-4"></div>
                 </div>
 
-                <div id="detail-box" class="hidden p-5 bg-white rounded-2xl border border-slate-200 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div id="detail-content" class="leading-relaxed"></div>
                 </div>
-            </div>
         </div>
 
         <div class="flex-1 relative"><div id="map"></div><button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white px-3 py-2 rounded-lg shadow-md z-10 text-[13px] font-bold hover:bg-slate-50 transition border border-slate-200">🚦 即時路況</button></div>
@@ -346,16 +343,74 @@
             } else { box.innerHTML = "<div class='text-[12px]'>✅ 路線已優化。可點擊地圖淺色線條對比時間。</div>"; }
         }
 
-        function toggleDetail(index) { const box = document.getElementById('detail-box'); const currentItinerary = itineraryData[currentDay]; if (lastShownDetailId === currentItinerary[index].id && !box.classList.contains('hidden')) { box.classList.add('hidden'); } else { showPlaceDetail(currentItinerary[index]); lastShownDetailId = currentItinerary[index].id; } }
+        // 💡 點擊展開/收合詳細資訊 (手風琴效果)
+        function toggleDetail(index) { 
+            const currentItinerary = itineraryData[currentDay]; 
+            const targetContainer = document.getElementById(`item-detail-${index}`);
+            
+            if (lastShownDetailId === currentItinerary[index].id && !targetContainer.classList.contains('hidden')) { 
+                targetContainer.classList.add('hidden'); 
+                lastShownDetailId = null; 
+            } else { 
+                for(let i=0; i<currentItinerary.length; i++) {
+                    const el = document.getElementById(`item-detail-${i}`);
+                    if(el) el.classList.add('hidden');
+                }
+                
+                targetContainer.classList.remove('hidden'); 
+                lastShownDetailId = currentItinerary[index].id; 
+                showPlaceDetail(currentItinerary[index], targetContainer); 
+            } 
+        }
 
-        async function showPlaceDetail(point) {
-            const box = document.getElementById('detail-box'); const content = document.getElementById('detail-content'); box.classList.remove('hidden');
-            const hour = new Date().getHours(); const types = point.types; let cat = "景點", advice = "環境穩定舒適。";
-            if (types.some(t => ['school', 'university'].includes(t))) { cat = "🏫 教育設施"; advice = "⚠️ 內部不開放參訪。非教職員禁止進入。"; } else if (types.some(t => ['restaurant', 'cafe', 'food'].includes(t))) { cat = "🍴 餐飲場所"; if ((hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 19)) advice = "🍴 <b>正值用餐尖峰</b>，建議提早訂位。"; } else if (types.includes('premise') || types.includes('street_address')) { cat = "🏠 私人區域"; advice = "🤫 <b>私人住宅區</b>。請保持安靜並尊重居民隱私。"; }
+        // 💡 在指定的容器內渲染詳細資訊
+        async function showPlaceDetail(point, container) {
+            const isHomeOrDeparture = point.name.includes("出發") || point.name.includes("回家") || point.name.includes("巷") || point.name.includes("號") || point.name.includes("住家") || point.name.includes("返程");
+
+            if (!point.photo && !point.place_id && !isHomeOrDeparture) {
+                container.innerHTML = `<div class="py-6 text-center text-blue-500 text-[12px] font-bold flex flex-col items-center gap-2">
+                    <span class="animate-spin text-xl">🔄</span> 載入真實照片與評價...
+                </div>`;
+                
+                await new Promise((resolve) => {
+                    service.textSearch({ query: point.name, location: point.location, radius: '1000' }, (results, status) => {
+                        if (status === 'OK' && results[0]) {
+                            service.getDetails({ placeId: results[0].place_id, fields: ["photos", "reviews", "types", "rating", "place_id"] }, (place, dStatus) => {
+                                if (dStatus === 'OK') {
+                                    point.place_id = place.place_id; 
+                                    point.photo = place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null;
+                                    point.reviews = place.reviews || [];
+                                    if(place.types) point.types = place.types;
+                                }
+                                resolve();
+                            });
+                        } else { resolve(); }
+                    });
+                });
+            }
+
+            const hour = new Date().getHours(); const types = point.types || []; let cat = "景點", advice = "環境穩定舒適。";
+            
+            if (types.some(t => ['school', 'university'].includes(t))) { cat = "🏫 教育設施"; advice = "⚠️ 內部可能不開放參訪。非教職員請注意。"; } 
+            else if (types.some(t => ['restaurant', 'cafe', 'food'].includes(t))) { cat = "🍴 餐飲場所"; if ((hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 19)) advice = "🍴 <b>正值用餐尖峰</b>，建議提早訂位。"; } 
+            else if (types.includes('premise') || types.includes('street_address') || types.length === 0 || isHomeOrDeparture) { cat = "🏠 特殊地點"; advice = "🤫 <b>可能是住家或私人區域</b>。若為住宅請保持安靜。"; }
+            
             let revHtml = ""; if (point.reviews && point.reviews.length > 0) {
                 let p = [], c = []; point.reviews.forEach(r => { if (r.rating >= 4 && p.length < 2) p.push(r.text.substring(0, 50)); if (r.rating <= 3 && c.length < 2) c.push(r.text.substring(0, 50)); });
-                revHtml = `<div class="mt-4 grid grid-cols-2 gap-3"><div class="bg-green-50 p-3 rounded-xl border border-green-100 shadow-sm"><p class="text-green-700 font-extrabold text-[13px] mb-1.5 flex items-center gap-1">✅ 讚點心得</p><ul class="text-[12px] text-green-800 space-y-1.5">${p.map(x=>`<li>• ${x}...</li>`).join('') || '<li>整體環境整潔</li>'}</ul></div><div class="bg-red-50 p-3 rounded-xl border border-red-100 shadow-sm"><p class="text-red-700 font-extrabold text-[13px] mb-1.5 flex items-center gap-1">⚠️ 旅客注意</p><ul class="text-[12px] text-red-800 space-y-1.5">${c.map(x=>`<li>• ${x}...</li>`).join('') || '<li>無特殊差評</li>'}</ul></div></div>`;
-            } content.innerHTML = `${point.photo ? `<img src="${point.photo}" class="rounded-2xl mb-4 w-full h-48 object-cover shadow-md">` : ''}<div class="text-slate-800 font-bold text-[17px] flex justify-between items-center px-1"><span>📍 ${point.name}</span><span class="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[11px] border border-blue-100 font-extrabold uppercase tracking-tighter">${cat}</span></div><div class="mt-3 p-4 bg-slate-50 rounded-xl text-slate-600 text-[14px] flex gap-3 border border-slate-100 shadow-sm"><div class="flex-shrink-0 text-lg">🕒</div><div class="flex-1 leading-relaxed"><span class="font-bold text-slate-700">AI 真實提醒：</span><span>${advice}</span></div></div>${revHtml}`;
+                revHtml = `<div class="mt-3 grid grid-cols-2 gap-2"><div class="bg-green-50 p-2.5 rounded-xl border border-green-100"><p class="text-green-700 font-extrabold text-[12px] mb-1 flex items-center gap-1">✅ 讚點</p><ul class="text-[11px] text-green-800 space-y-1">${p.map(x=>`<li class="truncate">• ${x}</li>`).join('') || '<li>整體環境整潔</li>'}</ul></div><div class="bg-red-50 p-2.5 rounded-xl border border-red-100"><p class="text-red-700 font-extrabold text-[12px] mb-1 flex items-center gap-1">⚠️ 注意</p><ul class="text-[11px] text-red-800 space-y-1">${c.map(x=>`<li class="truncate">• ${x}</li>`).join('') || '<li>無特殊差評</li>'}</ul></div></div>`;
+            } 
+            
+            container.innerHTML = `
+                <div class="mb-2">
+                    <span class="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[10px] border border-blue-100 font-extrabold uppercase tracking-tighter">${cat}</span>
+                </div>
+                ${point.photo ? `<img src="${point.photo}" class="rounded-xl mb-3 w-full h-32 object-cover shadow-sm">` : ''}
+                <div class="p-3 bg-slate-50 rounded-xl text-slate-600 text-[12px] flex gap-2 border border-slate-100 shadow-sm">
+                    <div class="flex-shrink-0 text-sm">🕒</div>
+                    <div class="flex-1 leading-relaxed"><span class="font-bold text-slate-700">AI 真實提醒：</span><span>${advice}</span></div>
+                </div>
+                ${revHtml}
+            `;
         }
 
         function editNote(id) { const currentItinerary = itineraryData[currentDay]; const item = currentItinerary.find(p => p.id === id); if (item) { const newNote = prompt(`為「${item.name}」加上個人備註（例如：買伴手禮、必吃滷肉飯）：`, item.note || ""); if (newNote !== null) { item.note = newNote; updateUI(); } } }
@@ -363,28 +418,34 @@
         function updateUI() {
             const currentItinerary = itineraryData[currentDay]; const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
             if (currentItinerary.length === 0) { list.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">📍 Day ${currentDay} 尚未新增地點</div>`; return; }
+            
+            // 💡 改良後的 HTML 結構，加入 item-detail 容器
             list.innerHTML = currentItinerary.map((p, i) => `
-                <div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm flex justify-between items-center group animate-in slide-in-from-left duration-200">
-                    <div class="flex-1 overflow-hidden">
-                        <p class="text-[11px] text-blue-500 font-bold uppercase tracking-wider">站點 ${i+1}</p>
-                        <div class="flex items-center gap-2">
-                            <p class="font-bold text-slate-800 text-[15px] truncate">${p.name}</p>
-                            <button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0" title="查看資訊">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            </button>
+                <div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm group animate-in slide-in-from-left duration-200">
+                    <div class="flex justify-between items-center w-full">
+                        <div class="flex-1 overflow-hidden">
+                            <p class="text-[11px] text-blue-500 font-bold uppercase tracking-wider">站點 ${i+1}</p>
+                            <div class="flex items-center gap-2">
+                                <p class="font-bold text-slate-800 text-[15px] truncate">${p.name}</p>
+                                <button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0 bg-blue-50 p-1 rounded-full" title="展開/收合資訊">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </button>
+                            </div>
+                            ${p.ai_description ? `<div class="mt-1.5 bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-1.5 rounded-lg inline-block border border-indigo-100">🤖 ${p.ai_description}</div>` : ''}
+                            ${p.note ? `<p class="text-[12px] text-emerald-600 mt-1.5 flex items-center gap-1 font-bold">📝 ${p.note}</p>` : ''}
                         </div>
-                        ${p.note ? `<p class="text-[12px] text-emerald-600 mt-1 flex items-center gap-1 font-bold">📝 ${p.note}</p>` : ''}
+                        <div class="flex items-center gap-1">
+                            <button onclick="editNote(${p.id})" class="text-slate-300 hover:text-emerald-500 transition px-1" title="加入個人備註"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                            <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                            <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button onclick="editNote(${p.id})" class="text-slate-300 hover:text-emerald-500 transition px-1" title="加入備註"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                        <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                        <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-                        <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
-                    </div>
+                    
+                    <div id="item-detail-${i}" class="hidden w-full mt-3 pt-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200"></div>
                 </div>`).join('');
         }
 
-        // 🤖 植入的 AI 對話發送與處理邏輯
         async function askAIForItinerary() {
             const promptValue = document.getElementById('ai-chat-prompt').value;
             if (!promptValue) return alert("請輸入您的想法喔！");
@@ -409,33 +470,71 @@
                 const data = await response.json();
                 
                 if (response.ok && data.status === 'success') {
-                    // 💡 將 AI 建議回填到當前天數的行程，同時顯示「車程」與「停留時間」
-                    itineraryData[currentDay] = data.suggestions.map((item, index) => {
-                        // 判斷是否為第一站 (出發點)
+                    
+                    // 💡 新增魔法：根據 AI 讀懂的交通工具，自動幫使用者切換畫面上方的按鈕！
+                    if (data.travel_mode) {
+                        currentMode = data.travel_mode;
+                        // 移除所有按鈕的亮起狀態
+                        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                        // 點亮正確的交通按鈕
+                        const activeBtn = document.getElementById(`btn-${data.travel_mode}`);
+                        if (activeBtn) activeBtn.classList.add('active');
+                    }
+
+                    let newPoints = [];
+                    for (let index = 0; index < data.suggestions.length; index++) {
+                        let item = data.suggestions[index];
+                        let isHome = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
+                        
+                        let finalLocation = new google.maps.LatLng(item.lat, item.lng);
+
+                        if (isHome) {
+                            if (index === data.suggestions.length - 1 && newPoints.length > 0) {
+                                finalLocation = newPoints[0].location;
+                            } else {
+                                await new Promise((resolve) => {
+                                    geocoder.geocode({ address: item.name }, (results, status) => {
+                                        if (status === 'OK' && results[0]) {
+                                            finalLocation = results[0].geometry.location;
+                                        }
+                                        resolve();
+                                    });
+                                });
+                            }
+                        }
+
                         let isFirstStop = index === 0;
                         
-                        // 讀取 AI 產生的各項數據
-                        let travel = isFirstStop ? '📍 出發點' : (item.travel_time ? `🚗 車程 ${item.travel_time}` : '');
-                        let stay = item.stay_time ? `⏱️ 停留 ${item.stay_time}` : '';
+                        // 💡 新增魔法：根據交通工具，動態變化備註裡的表情符號
+                        let modeEmoji = '🚗';
+                        if (data.travel_mode === 'TWO_WHEELER') modeEmoji = '🛵';
+                        else if (data.travel_mode === 'TRANSIT') modeEmoji = '🚌';
+                        else if (data.travel_mode === 'BICYCLING') modeEmoji = '🚲';
+                        else if (data.travel_mode === 'WALKING') modeEmoji = '🚶';
+
+                        let travel = isFirstStop ? '📍 出發點' : (item.travel_time ? `${modeEmoji} ${item.travel_time}` : '');
+                        let stay = item.stay_time ? `⏱️ ${item.stay_time}` : '';
                         let cost = item.cost_estimate ? `💰 ${item.cost_estimate}` : '';
                         let reason = item.reason ? `💡 ${item.reason}` : '';
                         
-                        // 組合備註字串 (用 filter 巧妙地把空字串濾掉，並用 ｜ 隔開)
-                        let richNote = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+                        let aiDesc = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
 
-                        return {
+                        newPoints.push({
                             id: Date.now() + index,
                             name: item.name,
-                            location: new google.maps.LatLng(item.lat, item.lng),
-                            note: richNote,
+                            location: finalLocation,
+                            ai_description: aiDesc,
+                            note: "",               
                             rating: 5,
-                            types: ['tourist_attraction'],
+                            types: isHome ? ['premise'] : ['tourist_attraction'],
                             reviews: []
-                        };
-                    });
+                        });
+                    }
 
-                    updateUI(); // 更新清單介面
-                    refreshMarkersOnly(); // 更新地圖圖標
+                    itineraryData[currentDay] = newPoints;
+                    
+                    updateUI(); 
+                    refreshMarkersOnly(); 
                     
                     document.getElementById('ai-suggestion-box').classList.remove('hidden');
                     document.getElementById('ai-suggestion-text').innerHTML = `<p class="italic text-indigo-700">「${data.ai_message}」</p>`;
