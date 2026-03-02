@@ -23,7 +23,7 @@
         .mode-btn { transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .mode-btn.active { background-color: #2563eb !important; color: white !important; font-weight: 800; border: 2px solid #1e40af; }
         
-        .day-tab { white-space: nowrap; transition: all 0.2s; }
+        .day-tab { white-space: nowrap; transition: all 0.2s; cursor: pointer; }
         .day-tab.active { background-color: #2563eb; color: white; border-color: #1e40af; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
         .day-tab:hover:not(.active) { background-color: #e2e8f0; }
 
@@ -121,7 +121,7 @@
                     <div id="ai-suggestion-text" class="text-[12px] text-indigo-900 leading-relaxed space-y-4"></div>
                 </div>
 
-                </div>
+            </div>
         </div>
 
         <div class="flex-1 relative"><div id="map"></div><button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white px-3 py-2 rounded-lg shadow-md z-10 text-[13px] font-bold hover:bg-slate-50 transition border border-slate-200">🚦 即時路況</button></div>
@@ -132,6 +132,10 @@
         let itineraryData = { 1: [] };
         let currentDay = 1;
         let dayCount = 1;
+        
+        let aiChatHistory = {}; 
+        let searchDrafts = {}; 
+        let aiPromptDrafts = {};
 
         let markers = [], routeLines = [], routeLabels = [];
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
@@ -145,6 +149,17 @@
             
             const input = document.getElementById("pac-input");
             input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); searchPlace(); } });
+            
+            // 🔪👇 從這裡開始插入（新增 AI 對話框的 Enter 快捷鍵）
+            const aiInput = document.getElementById("ai-chat-prompt");
+            aiInput.addEventListener("keydown", (e) => { 
+                if (e.key === "Enter" && !e.shiftKey) { 
+                    e.preventDefault(); // 阻止原生的換行動作
+                    askAIForItinerary(); // 直接觸發 AI 生成
+                } 
+            });
+            // 🔪👆 插入結束
+
             const autocomplete = new google.maps.places.Autocomplete(input, { fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] });
             autocomplete.addListener("place_changed", () => { const place = autocomplete.getPlace(); if (place.geometry) { processNewPlace(place); input.value = ""; } });
 
@@ -198,15 +213,84 @@
         function renderDayTabs() {
             const container = document.getElementById('day-tabs-container'); container.innerHTML = '';
             for (let i = 1; i <= dayCount; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative inline-block group shrink-0";
+                
                 const btn = document.createElement('button');
-                btn.className = `day-tab px-4 py-2 rounded-xl text-sm font-bold border border-slate-200 ${currentDay === i ? 'active' : 'bg-white text-slate-600'}`;
-                btn.innerText = `Day ${i}`; btn.onclick = () => switchDay(i); container.appendChild(btn);
+                const paddingRight = dayCount > 1 ? 'pr-8' : 'px-4';
+                btn.className = `day-tab py-2 pl-4 ${paddingRight} rounded-xl text-sm font-bold border border-slate-200 transition-all ${currentDay === i ? 'active' : 'bg-white text-slate-600'}`;
+                btn.innerText = `Day ${i}`; 
+                btn.onclick = () => switchDay(i); 
+                wrapper.appendChild(btn);
+
+                if (dayCount > 1) {
+                    const delBtn = document.createElement('button');
+                    delBtn.innerHTML = "✕";
+                    delBtn.className = `absolute right-2.5 top-1/2 -translate-y-1/2 text-[13px] font-extrabold transition-colors ${currentDay === i ? 'text-blue-300 hover:text-white' : 'text-slate-300 hover:text-red-500'}`;
+                    delBtn.onclick = (e) => { e.stopPropagation(); removeDay(i); };
+                    wrapper.appendChild(delBtn);
+                }
+
+                container.appendChild(wrapper);
             }
-            const addBtn = document.createElement('button'); addBtn.className = "px-3 py-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold border border-slate-200 transition";
+            const addBtn = document.createElement('button'); addBtn.className = "px-3 py-2 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold border border-slate-200 transition shrink-0";
             addBtn.innerHTML = "+"; addBtn.onclick = addNewDay; container.appendChild(addBtn);
         }
 
-        function switchDay(day) { currentDay = day; clearAllRoutes(); renderDayTabs(); updateUI(); refreshMarkersOnly(); document.getElementById('ai-suggestion-box').classList.add('hidden'); document.getElementById('current-day-label').innerText = `📍 Day ${currentDay} 行程`; document.getElementById('btn-day-num').innerText = currentDay; }
+        function removeDay(dayToDelete) {
+            if (dayCount <= 1) return; 
+            if (!confirm(`確定要刪除 Day ${dayToDelete} 的行程嗎？`)) return;
+
+            for (let i = dayToDelete; i < dayCount; i++) {
+                itineraryData[i] = itineraryData[i + 1] || [];
+                searchDrafts[i] = searchDrafts[i + 1] || '';
+                aiPromptDrafts[i] = aiPromptDrafts[i + 1] || '';
+                aiChatHistory[i] = aiChatHistory[i + 1] || [];
+            }
+            
+            delete itineraryData[dayCount];
+            delete searchDrafts[dayCount];
+            delete aiPromptDrafts[dayCount];
+            delete aiChatHistory[dayCount];
+            
+            dayCount--;
+
+            if (currentDay > dayCount) currentDay = dayCount;
+
+            clearAllRoutes(); 
+            renderDayTabs(); 
+            updateUI(); 
+            refreshMarkersOnly(); 
+            document.getElementById('ai-suggestion-box').classList.add('hidden'); 
+            document.getElementById('current-day-label').innerText = `📍 Day ${currentDay} 行程`; 
+            document.getElementById('btn-day-num').innerText = currentDay; 
+
+            document.getElementById('pac-input').value = searchDrafts[currentDay] || '';
+            document.getElementById('ai-chat-prompt').value = aiPromptDrafts[currentDay] || '';
+            document.getElementById('search-results-panel').classList.remove('active');
+        }
+
+        function switchDay(day) { 
+            searchDrafts[currentDay] = document.getElementById('pac-input').value;
+            aiPromptDrafts[currentDay] = document.getElementById('ai-chat-prompt').value;
+
+            currentDay = day; 
+            
+            if(!itineraryData[currentDay]) itineraryData[currentDay] = [];
+            
+            clearAllRoutes(); 
+            renderDayTabs(); 
+            updateUI(); 
+            refreshMarkersOnly(); 
+            document.getElementById('ai-suggestion-box').classList.add('hidden'); 
+            document.getElementById('current-day-label').innerText = `📍 Day ${currentDay} 行程`; 
+            document.getElementById('btn-day-num').innerText = currentDay; 
+
+            document.getElementById('pac-input').value = searchDrafts[currentDay] || '';
+            document.getElementById('ai-chat-prompt').value = aiPromptDrafts[currentDay] || '';
+            document.getElementById('search-results-panel').classList.remove('active');
+        }
+        
         function addNewDay() { dayCount++; itineraryData[dayCount] = []; switchDay(dayCount); }
 
         function searchPlace() {
@@ -227,6 +311,7 @@
         function fetchFullDetails(placeId) { service.getDetails({ placeId, fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] }, (place, status) => { if (status === 'OK') processNewPlace(place); }); }
 
         function processNewPlace(place) {
+            if(!itineraryData[currentDay]) itineraryData[currentDay] = [];
             itineraryData[currentDay].push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0, note: "" });
             updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
@@ -234,7 +319,7 @@
         function clearAllRoutes() { routeLines.forEach(l => l.setMap(null)); routeLabels.forEach(l => l.setMap(null)); routeLines = []; routeLabels = []; document.getElementById('ai-suggestion-box').classList.add('hidden'); document.getElementById('route-toggles').classList.add('hidden'); visibleLegs.clear(); selectedRoutesMap = {}; }
 
         function refreshMarkersOnly() {
-            markers.forEach(m => m.setMap(null)); markers = []; const counts = {}; const currentItinerary = itineraryData[currentDay];
+            markers.forEach(m => m.setMap(null)); markers = []; const counts = {}; const currentItinerary = itineraryData[currentDay] || [];
             currentItinerary.forEach((p, index) => {
                 const key = `${p.location.lat().toFixed(6)},${p.location.lng().toFixed(6)}`; let lat = p.location.lat(), lng = p.location.lng();
                 if (counts[key]) { lat += (counts[key] * 0.00022); lng += (counts[key] * 0.00022); counts[key]++; } else { counts[key] = 1; }
@@ -244,7 +329,7 @@
         }
 
         async function calculateRoute() {
-            const currentItinerary = itineraryData[currentDay]; if (currentItinerary.length < 2) return;
+            const currentItinerary = itineraryData[currentDay] || []; if (currentItinerary.length < 2) return;
             clearAllRoutes(); document.getElementById('route-toggles').classList.remove('hidden');
             const aiBox = document.getElementById('ai-suggestion-box'), aiText = document.getElementById('ai-suggestion-text');
             aiBox.classList.remove('hidden'); aiText.innerHTML = `正在計算 Day ${currentDay} 最佳路徑...`;
@@ -258,10 +343,27 @@
         }
 
         async function requestRouteByMode(origin, dest, mode) {
-            let apiMode = google.maps.TravelMode[mode] || mode; let request = { origin: origin, destination: dest, travelMode: apiMode, provideRouteAlternatives: true };
-            if (mode === 'TWO_WHEELER') { request.travelMode = google.maps.TravelMode.DRIVING; request.avoidHighways = true; }
-            if (mode === 'DRIVING' || mode === 'TWO_WHEELER') { request.drivingOptions = { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS }; }
-            return new Promise((resolve) => { directionsService.route(request, (res, status) => resolve(status === 'OK' ? res : null)); });
+            let apiMode = google.maps.TravelMode[mode] || mode; 
+            let request = { origin: origin, destination: dest, travelMode: apiMode, provideRouteAlternatives: true };
+            
+            if (mode === 'DRIVING' || mode === 'TWO_WHEELER') { 
+                request.drivingOptions = { departureTime: new Date(), trafficModel: google.maps.TrafficModel.BEST_GUESS }; 
+            }
+            
+            return new Promise((resolve) => { 
+                directionsService.route(request, (res, status) => {
+                    if (status === 'OK') {
+                        resolve(res);
+                    } else if (mode === 'TWO_WHEELER') {
+                        request.travelMode = google.maps.TravelMode.DRIVING;
+                        request.avoidHighways = true;
+                        request.avoidTolls = true;
+                        directionsService.route(request, (fallbackRes, fStatus) => resolve(fStatus === 'OK' ? fallbackRes : null));
+                    } else {
+                        resolve(null);
+                    }
+                }); 
+            });
         }
 
         function getTrafficColor(route, defaultColor) {
@@ -316,7 +418,7 @@
         }
 
         function checkOptimalRouteSuggestion() {
-            const currentItinerary = itineraryData[currentDay]; if (currentItinerary.length < 3 || currentMode === 'TRANSIT') return;
+            const currentItinerary = itineraryData[currentDay] || []; if (currentItinerary.length < 3 || currentMode === 'TRANSIT') return;
             let optMode = (currentMode === 'TWO_WHEELER') ? 'TWO_WHEELER' : currentMode;
             let request = { origin: currentItinerary[0].location, destination: currentItinerary[currentItinerary.length - 1].location, waypoints: currentItinerary.slice(1, -1).map(p => ({ location: p.location, stopover: true })), optimizeWaypoints: true, travelMode: google.maps.TravelMode[optMode] || optMode };
             if (currentMode === 'TWO_WHEELER') { request.travelMode = google.maps.TravelMode.DRIVING; request.avoidHighways = true; }
@@ -330,7 +432,7 @@
         }
 
         function renderAISuggestions() {
-            const currentItinerary = itineraryData[currentDay]; const box = document.getElementById('ai-suggestion-text'); let html = "";
+            const currentItinerary = itineraryData[currentDay] || []; const box = document.getElementById('ai-suggestion-text'); let html = "";
             if (currentMode === 'TRANSIT') {
                 for (let i = 0; i < currentItinerary.length - 1; i++) {
                     if (!visibleLegs.has(i) || !selectedRoutesMap[i].result) continue; const leg = selectedRoutesMap[i].result.routes[selectedRoutesMap[i].index].legs[0];
@@ -343,9 +445,8 @@
             } else { box.innerHTML = "<div class='text-[12px]'>✅ 路線已優化。可點擊地圖淺色線條對比時間。</div>"; }
         }
 
-        // 💡 點擊展開/收合詳細資訊 (手風琴效果)
         function toggleDetail(index) { 
-            const currentItinerary = itineraryData[currentDay]; 
+            const currentItinerary = itineraryData[currentDay] || []; 
             const targetContainer = document.getElementById(`item-detail-${index}`);
             
             if (lastShownDetailId === currentItinerary[index].id && !targetContainer.classList.contains('hidden')) { 
@@ -363,7 +464,6 @@
             } 
         }
 
-        // 💡 在指定的容器內渲染詳細資訊
         async function showPlaceDetail(point, container) {
             const isHomeOrDeparture = point.name.includes("出發") || point.name.includes("回家") || point.name.includes("巷") || point.name.includes("號") || point.name.includes("住家") || point.name.includes("返程");
 
@@ -416,10 +516,9 @@
         function editNote(id) { const currentItinerary = itineraryData[currentDay]; const item = currentItinerary.find(p => p.id === id); if (item) { const newNote = prompt(`為「${item.name}」加上個人備註（例如：買伴手禮、必吃滷肉飯）：`, item.note || ""); if (newNote !== null) { item.note = newNote; updateUI(); } } }
 
         function updateUI() {
-            const currentItinerary = itineraryData[currentDay]; const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
+            const currentItinerary = itineraryData[currentDay] || []; const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
             if (currentItinerary.length === 0) { list.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">📍 Day ${currentDay} 尚未新增地點</div>`; return; }
             
-            // 💡 改良後的 HTML 結構，加入 item-detail 容器
             list.innerHTML = currentItinerary.map((p, i) => `
                 <div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm group animate-in slide-in-from-left duration-200">
                     <div class="flex justify-between items-center w-full">
@@ -458,25 +557,33 @@
             btnText.innerText = "AI 正在規劃中...";
 
             try {
+                if (!aiChatHistory[currentDay]) aiChatHistory[currentDay] = [];
+
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     },
-                    body: JSON.stringify({ prompt: promptValue, mode: currentMode })
+                    body: JSON.stringify({ 
+                        prompt: promptValue, 
+                        mode: currentMode,
+                        history: aiChatHistory[currentDay],
+                        all_itineraries: itineraryData // 💡 魔法：把所有天數的行程當作「小抄」傳給後端 AI
+                    })
                 });
 
                 const data = await response.json();
                 
                 if (response.ok && data.status === 'success') {
                     
-                    // 💡 新增魔法：根據 AI 讀懂的交通工具，自動幫使用者切換畫面上方的按鈕！
+                    let routeNames = data.suggestions.map(s => s.name).join(' ➔ ');
+                    aiChatHistory[currentDay].push({ role: 'user', text: promptValue });
+                    aiChatHistory[currentDay].push({ role: 'model', text: `我為你規劃了行程：${routeNames}。總結：${data.ai_message}` });
+
                     if (data.travel_mode) {
                         currentMode = data.travel_mode;
-                        // 移除所有按鈕的亮起狀態
                         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-                        // 點亮正確的交通按鈕
                         const activeBtn = document.getElementById(`btn-${data.travel_mode}`);
                         if (activeBtn) activeBtn.classList.add('active');
                     }
@@ -505,7 +612,6 @@
 
                         let isFirstStop = index === 0;
                         
-                        // 💡 新增魔法：根據交通工具，動態變化備註裡的表情符號
                         let modeEmoji = '🚗';
                         if (data.travel_mode === 'TWO_WHEELER') modeEmoji = '🛵';
                         else if (data.travel_mode === 'TRANSIT') modeEmoji = '🚌';
