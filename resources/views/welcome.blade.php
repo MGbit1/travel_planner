@@ -465,9 +465,9 @@
         }
 
         async function showPlaceDetail(point, container) {
-            const isHomeOrDeparture = point.name.includes("出發") || point.name.includes("回家") || point.name.includes("巷") || point.name.includes("號") || point.name.includes("住家") || point.name.includes("返程");
+            const isDashboardOrDeparture = point.name.includes("出發") || point.name.includes("回家") || point.name.includes("巷") || point.name.includes("號") || point.name.includes("住家") || point.name.includes("返程");
 
-            if (!point.photo && !point.place_id && !isHomeOrDeparture) {
+            if (!point.photo && !point.place_id && !isDashboardOrDeparture) {
                 container.innerHTML = `<div class="py-6 text-center text-blue-500 text-[12px] font-bold flex flex-col items-center gap-2">
                     <span class="animate-spin text-xl">🔄</span> 載入真實照片與評價...
                 </div>`;
@@ -493,7 +493,7 @@
             
             if (types.some(t => ['school', 'university'].includes(t))) { cat = "🏫 教育設施"; advice = "⚠️ 內部可能不開放參訪。非教職員請注意。"; } 
             else if (types.some(t => ['restaurant', 'cafe', 'food'].includes(t))) { cat = "🍴 餐飲場所"; if ((hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 19)) advice = "🍴 <b>正值用餐尖峰</b>，建議提早訂位。"; } 
-            else if (types.includes('premise') || types.includes('street_address') || types.length === 0 || isHomeOrDeparture) { cat = "🏠 特殊地點"; advice = "🤫 <b>可能是住家或私人區域</b>。若為住宅請保持安靜。"; }
+            else if (types.includes('premise') || types.includes('street_address') || types.length === 0 || isDashboardOrDeparture) { cat = "🏠 特殊地點"; advice = "🤫 <b>可能是住家或私人區域</b>。若為住宅請保持安靜。"; }
             
             let revHtml = ""; if (point.reviews && point.reviews.length > 0) {
                 let p = [], c = []; point.reviews.forEach(r => { if (r.rating >= 4 && p.length < 2) p.push(r.text.substring(0, 50)); if (r.rating <= 3 && c.length < 2) c.push(r.text.substring(0, 50)); });
@@ -591,11 +591,11 @@
                     let newPoints = [];
                     for (let index = 0; index < data.suggestions.length; index++) {
                         let item = data.suggestions[index];
-                        let isHome = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
+                        let isDashboard = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
                         
                         let finalLocation = new google.maps.LatLng(item.lat, item.lng);
 
-                        if (isHome) {
+                        if (isDashboard) {
                             if (index === data.suggestions.length - 1 && newPoints.length > 0) {
                                 finalLocation = newPoints[0].location;
                             } else {
@@ -632,7 +632,7 @@
                             ai_description: aiDesc,
                             note: "",               
                             rating: 5,
-                            types: isHome ? ['premise'] : ['tourist_attraction'],
+                            types: isDashboard ? ['premise'] : ['tourist_attraction'],
                             reviews: []
                         });
                     }
