@@ -48,14 +48,37 @@
 
     <div class="flex h-screen w-full overflow-hidden">
         <div class="w-80 md:w-[420px] bg-white shadow-2xl z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
-            <div class="p-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center">
+            
+            <div class="p-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center shadow-md relative z-30">
                 <div>
-                    <h1 class="text-2xl font-bold flex items-center gap-2"><span>🚀</span> AI 旅程大師</h1>
-                    <p class="text-blue-100 text-[10px] mt-1">Multi-Day Smart Planning</p>
+                    <h1 class="text-xl font-bold flex items-center gap-2"><span>🚀</span> AI 旅程大師</h1>
+                    <p class="text-blue-100 text-[10px] mt-0.5">Multi-Day Smart Planning</p>
                 </div>
-                <button onclick="saveFullTrip()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition flex items-center gap-1 border border-indigo-400">
-                    <span>💾</span> 存檔
-                </button>
+                
+                <div class="flex items-center gap-3">
+                    @if (Route::has('login'))
+                        @auth
+                            <div class="flex flex-col items-end">
+                                <span class="text-[11px] text-blue-100 font-bold truncate max-w-[80px]">Hi, {{ Auth::user()->name }}</span>
+                                <form method="POST" action="{{ route('logout') }}" class="mt-0.5">
+                                    @csrf
+                                    <button type="submit" class="text-[10px] text-blue-200 hover:text-white transition underline">登出帳號</button>
+                                </form>
+                            </div>
+                        @else
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('login') }}" class="text-[12px] font-bold text-blue-100 hover:text-white transition">登入</a>
+                                @if (Route::has('register'))
+                                    <a href="{{ route('register') }}" class="bg-white text-indigo-600 hover:bg-blue-50 px-2.5 py-1 rounded-md text-[11px] font-black shadow-sm transition">註冊</a>
+                                @endif
+                            </div>
+                        @endauth
+                    @endif
+
+                    <button onclick="saveFullTrip()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition flex items-center gap-1 border border-indigo-400 ml-1">
+                        <span>💾</span> 存檔
+                    </button>
+                </div>
             </div>
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
@@ -134,6 +157,9 @@
     </div>
 
     <script>
+        // 💡 抓取 Laravel 的登入狀態，傳給 JavaScript
+        const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+
         let map, service, geocoder, directionsService, trafficLayer;
         let itineraryData = { 1: [] };
         let currentDay = 1;
@@ -146,6 +172,7 @@
         let markers = [], routeLines = [], routeLabels = [];
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
         let lastShownDetailId = null;
+        let tempOptimizedItinerary = null; 
 
         const colorPalette = ["#7c3aed", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#06b6d4"];
 
@@ -171,7 +198,14 @@
             renderDayTabs(); updateUI(); 
         }
 
+        // 💡 修改存檔邏輯，加入登入防呆檢查
         async function saveFullTrip() {
+            if (!isLoggedIn) {
+                alert("🔒 請先「登入或註冊」，才能將專屬行程存入您的帳號喔！");
+                window.location.href = "{{ route('login') }}"; // 自動導向登入頁面
+                return;
+            }
+
             let hasPoints = false;
             for (let day in itineraryData) {
                 if (itineraryData[day].length > 0) hasPoints = true;
@@ -204,7 +238,7 @@
                 const result = await response.json();
                 
                 if (response.ok && result.status === 'success') {
-                    alert("✅ 存檔成功！行程已安全存入資料庫！ (ID: " + result.id + ")");
+                    alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！ (ID: " + result.id + ")");
                 } else {
                     console.error("Server Error:", result);
                     alert("❌ 儲存失敗，請檢查後端錯誤：\n" + (result.message || JSON.stringify(result)));
@@ -346,12 +380,10 @@
             }
             renderAISuggestions(); updateRouteVisibility(); 
             
-            // 💡 雙重大腦啟動：先算距離互換，再算日夜時間
             checkOptimalRouteSuggestion(); 
             analyzeTimeSuitabilityInBackground(); 
         }
 
-        // 💡 幕後軍師：在提示框中加入「日夜時間建議」
         async function analyzeTimeSuitabilityInBackground() {
             const currentItinerary = itineraryData[currentDay] || [];
             if (currentItinerary.length < 2) return;
@@ -384,7 +416,6 @@
                 if(loadingEl) loadingEl.remove();
 
                 if (response.ok && data.status === 'success') {
-                    // 把時間建議貼在下方
                     box.innerHTML += `<div class="mt-3 p-3 bg-indigo-50 text-indigo-800 text-[12px] font-bold rounded-lg border border-indigo-200 shadow-sm leading-relaxed">
                         <div class="flex items-center gap-1 mb-1 text-[13px]"><span>🕒</span> 日夜時間提醒：</div>
                         ${data.ai_message}
@@ -397,7 +428,6 @@
             }
         }
 
-        // 💡 頂部的神級按鈕：結合距離與時間的終極大腦
         async function smartOptimizeRoute() {
             const currentItinerary = itineraryData[currentDay] || [];
             if (currentItinerary.length < 3) return alert("行程太少，無需最佳化！");
@@ -551,7 +581,6 @@
             }); routeLabels.forEach(m => updateSingleLabel(m, m.legIndex)); updateRouteVisibility(); 
         }
 
-        // 💡 只有單純的 Google 路線互換提示 (無按鈕)
         function checkOptimalRouteSuggestion() {
             const currentItinerary = itineraryData[currentDay] || []; 
             if (currentItinerary.length < 3 || currentMode === 'TRANSIT') return;
@@ -591,7 +620,6 @@
                     
                     let suggestionHTML = "";
 
-                    // 💡 如您所願：顯示具體的第X站與第Y站互換，並指引他去按最上面的紫按鈕
                     if (swap) {
                         suggestionHTML += `
                             <div class="mt-3 p-3 bg-blue-50 text-blue-800 rounded-lg border border-blue-200 leading-relaxed shadow-sm">
