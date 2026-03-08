@@ -110,14 +110,20 @@
                         </h2>
                         <span class="text-[11px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold" id="point-count">0 個地點</span>
                     </div>
+                    
+                    <button onclick="smartOptimizeRoute()" id="optimize-btn" class="hidden w-full mb-1 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all text-[13px] flex justify-center items-center gap-2">
+                        <span>✨</span> 智能一鍵順路最佳化 (保留鎖定)
+                    </button>
+
                     <div id="itinerary-list" class="space-y-3 min-h-[100px]"></div>
+                    
                     <button onclick="calculateRoute()" id="route-btn" class="hidden w-full bg-emerald-600 text-white py-4 rounded-2xl font-extrabold text-base hover:bg-emerald-700 shadow-lg transition transform hover:scale-[1.02]">
                         計算 Day <span id="btn-day-num">1</span> 路徑
                     </button>
                 </div>
 
-                <div id="ai-suggestion-box" class="hidden p-5 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm animate-in fade-in">
-                    <h3 class="text-indigo-800 font-bold text-[13px] mb-3 flex items-center gap-1">🤖 AI 即時導引與轉乘建議</h3>
+                <div id="ai-suggestion-box" class="hidden p-5 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm animate-in fade-in mt-4">
+                    <h3 class="text-indigo-800 font-bold text-[13px] mb-3 flex items-center gap-1">🤖 AI 即時導引與建議</h3>
                     <div id="ai-suggestion-text" class="text-[12px] text-indigo-900 leading-relaxed space-y-4"></div>
                 </div>
 
@@ -140,6 +146,7 @@
         let markers = [], routeLines = [], routeLabels = [];
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
         let lastShownDetailId = null;
+
         const colorPalette = ["#7c3aed", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#06b6d4"];
 
         function initMap() {
@@ -150,15 +157,13 @@
             const input = document.getElementById("pac-input");
             input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); searchPlace(); } });
             
-            // 🔪👇 從這裡開始插入（新增 AI 對話框的 Enter 快捷鍵）
             const aiInput = document.getElementById("ai-chat-prompt");
             aiInput.addEventListener("keydown", (e) => { 
                 if (e.key === "Enter" && !e.shiftKey) { 
-                    e.preventDefault(); // 阻止原生的換行動作
-                    askAIForItinerary(); // 直接觸發 AI 生成
+                    e.preventDefault(); 
+                    askAIForItinerary(); 
                 } 
             });
-            // 🔪👆 插入結束
 
             const autocomplete = new google.maps.places.Autocomplete(input, { fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] });
             autocomplete.addListener("place_changed", () => { const place = autocomplete.getPlace(); if (place.geometry) { processNewPlace(place); input.value = ""; } });
@@ -312,7 +317,7 @@
 
         function processNewPlace(place) {
             if(!itineraryData[currentDay]) itineraryData[currentDay] = [];
-            itineraryData[currentDay].push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0, note: "" });
+            itineraryData[currentDay].push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0, note: "", isLocked: false });
             updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
 
@@ -339,7 +344,136 @@
                 const results = await requestRouteByMode(currentItinerary[i].location, currentItinerary[i+1].location, currentMode);
                 if (results && results.routes) { selectedRoutesMap[i].result = results; drawLeg(results.routes, i); } else { aiText.innerHTML = `<span class="text-red-500 font-bold">❌ 第 ${i+1} 段計算失敗。</span>`; return; }
             }
-            renderAISuggestions(); updateRouteVisibility(); checkOptimalRouteSuggestion();
+            renderAISuggestions(); updateRouteVisibility(); 
+            
+            // 💡 雙重大腦啟動：先算距離互換，再算日夜時間
+            checkOptimalRouteSuggestion(); 
+            analyzeTimeSuitabilityInBackground(); 
+        }
+
+        // 💡 幕後軍師：在提示框中加入「日夜時間建議」
+        async function analyzeTimeSuitabilityInBackground() {
+            const currentItinerary = itineraryData[currentDay] || [];
+            if (currentItinerary.length < 2) return;
+
+            let placesList = currentItinerary.map((p, index) => `第 ${index + 1} 站：${p.name}`).join(' -> ');
+            let promptValue = `使用者目前的行程順序是：${placesList}。請以專業導遊的身份，簡短檢查這個順序的「日夜時間合適度」。如果有明顯不適合的時間（例如早上排夜市、中午看夜景），請特別提醒「第X站的OOO建議在O上/下午/晚上去比較適合」。如果時間安排看起來很合理，請說「日夜時間安排看起來很順暢喔！」。請保持簡短扼要，大約一兩句話即可，不要重新排列表格。`;
+
+            try {
+                const box = document.getElementById('ai-suggestion-text');
+                const loadingId = 'ai-time-loading-' + Date.now();
+                box.innerHTML += `<div id="${loadingId}" class="mt-3 text-indigo-500 text-[12px] animate-pulse flex items-center gap-1"><span>🧠</span> AI 正在評估各景點的最佳造訪時間...</div>`;
+
+                const response = await fetch('/ai-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ 
+                        prompt: promptValue, 
+                        mode: currentMode,
+                        history: [], 
+                        all_itineraries: {} 
+                    })
+                });
+
+                const data = await response.json();
+                
+                const loadingEl = document.getElementById(loadingId);
+                if(loadingEl) loadingEl.remove();
+
+                if (response.ok && data.status === 'success') {
+                    // 把時間建議貼在下方
+                    box.innerHTML += `<div class="mt-3 p-3 bg-indigo-50 text-indigo-800 text-[12px] font-bold rounded-lg border border-indigo-200 shadow-sm leading-relaxed">
+                        <div class="flex items-center gap-1 mb-1 text-[13px]"><span>🕒</span> 日夜時間提醒：</div>
+                        ${data.ai_message}
+                    </div>`;
+                }
+            } catch (error) {
+                console.error("AI 時間分析失敗", error);
+                const loadingEl = document.getElementById(loadingId);
+                if(loadingEl) loadingEl.remove();
+            }
+        }
+
+        // 💡 頂部的神級按鈕：結合距離與時間的終極大腦
+        async function smartOptimizeRoute() {
+            const currentItinerary = itineraryData[currentDay] || [];
+            if (currentItinerary.length < 3) return alert("行程太少，無需最佳化！");
+
+            let placesList = currentItinerary.map((p, index) => {
+                return `第 ${index + 1} 站：${p.name} ${p.isLocked ? '(此站順序【絕對不可變動】)' : ''}`;
+            }).join('\n');
+
+            let promptValue = `我已經選定了以下 ${currentItinerary.length} 個景點（依照目前順序）：\n${placesList}\n\n請發揮專業導遊的能力，根據「各景點最適合的日夜時間（如夜市/看夜景必須在晚上）」與「交通順路程度」幫我重新排序，找出最完美的走法。\n\n【嚴格約束條件】：\n1. 標示為【絕對不可變動】的景點，絕對不能改變它在清單中的順序！\n2. 請務必使用原景點名稱，不要新增或刪除。\n3. 直接給我排好的最佳清單與專業理由。`;
+
+            const btn = document.getElementById('optimize-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.classList.add('opacity-70');
+            btn.innerHTML = "🧠 系統深度思考與重排中...";
+
+            try {
+                const response = await fetch('/ai-generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ 
+                        prompt: promptValue, 
+                        mode: currentMode,
+                        history: [], 
+                        all_itineraries: {} 
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    let newOrder = [];
+                    let unmatched = [...currentItinerary];
+
+                    data.suggestions.forEach(aiItem => {
+                        let matchIndex = unmatched.findIndex(p => aiItem.name.includes(p.name) || p.name.includes(aiItem.name) || aiItem.name === p.name);
+                        if (matchIndex !== -1) {
+                            let modeEmoji = '🚗';
+                            if (data.travel_mode === 'TWO_WHEELER') modeEmoji = '🛵';
+                            else if (data.travel_mode === 'TRANSIT') modeEmoji = '🚌';
+                            else if (data.travel_mode === 'BICYCLING') modeEmoji = '🚲';
+                            else if (data.travel_mode === 'WALKING') modeEmoji = '🚶';
+
+                            let travel = (newOrder.length === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
+                            let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
+                            let cost = aiItem.cost_estimate ? `💰 ${aiItem.cost_estimate}` : '';
+                            let reason = aiItem.reason ? `💡 ${aiItem.reason}` : '';
+                            
+                            unmatched[matchIndex].ai_description = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+                            newOrder.push(unmatched[matchIndex]);
+                            unmatched.splice(matchIndex, 1);
+                        }
+                    });
+
+                    newOrder = newOrder.concat(unmatched);
+                    itineraryData[currentDay] = newOrder;
+                    
+                    updateUI(); 
+                    refreshMarkersOnly(); 
+                    calculateRoute();
+                    
+                    alert("✨ 智能一鍵順路最佳化完成！已為您排好完美時間與路線。");
+                } else {
+                    alert("❌ 最佳化失敗：" + (data.message || "請檢查 API 設定"));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("🚨 連線異常，請確認 Laravel 伺服器運作中");
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-70');
+                btn.innerHTML = originalText;
+            }
         }
 
         async function requestRouteByMode(origin, dest, mode) {
@@ -417,16 +551,61 @@
             }); routeLabels.forEach(m => updateSingleLabel(m, m.legIndex)); updateRouteVisibility(); 
         }
 
+        // 💡 只有單純的 Google 路線互換提示 (無按鈕)
         function checkOptimalRouteSuggestion() {
-            const currentItinerary = itineraryData[currentDay] || []; if (currentItinerary.length < 3 || currentMode === 'TRANSIT') return;
+            const currentItinerary = itineraryData[currentDay] || []; 
+            if (currentItinerary.length < 3 || currentMode === 'TRANSIT') return;
+
             let optMode = (currentMode === 'TWO_WHEELER') ? 'TWO_WHEELER' : currentMode;
-            let request = { origin: currentItinerary[0].location, destination: currentItinerary[currentItinerary.length - 1].location, waypoints: currentItinerary.slice(1, -1).map(p => ({ location: p.location, stopover: true })), optimizeWaypoints: true, travelMode: google.maps.TravelMode[optMode] || optMode };
-            if (currentMode === 'TWO_WHEELER') { request.travelMode = google.maps.TravelMode.DRIVING; request.avoidHighways = true; }
+            let request = { 
+                origin: currentItinerary[0].location, 
+                destination: currentItinerary[currentItinerary.length - 1].location, 
+                waypoints: currentItinerary.slice(1, -1).map(p => ({ location: p.location, stopover: true })), 
+                optimizeWaypoints: true, 
+                travelMode: google.maps.TravelMode[optMode] || optMode 
+            };
+            
+            if (currentMode === 'TWO_WHEELER') { 
+                request.travelMode = google.maps.TravelMode.DRIVING; 
+                request.avoidHighways = true; 
+            }
+            
             directionsService.route(request, (res, status) => {
                 if (status === 'OK') {
-                    const opt = res.routes[0].waypoint_order; let swap = "";
-                    for(let i=0; i<opt.length; i++) if(opt[i] !== i) { swap = `將 <span class="text-red-600 font-bold">第 ${i+2} 站</span> 與 <span class="text-red-600 font-bold">第 ${opt[i]+2} 站</span> 互換更省時！`; break; }
-                    if (swap) { document.getElementById('ai-suggestion-text').innerHTML += `<div class="mt-2 text-indigo-700 font-bold">💡 AI 建議：${swap}</div>`; }
+                    const opt = res.routes[0].waypoint_order; 
+                    let swap = "";
+                    let hasLocks = currentItinerary.some(item => item.isLocked);
+                    
+                    for(let i=0; i<opt.length; i++) {
+                        if(opt[i] !== i) {
+                            let originalIndex = i + 1;
+                            let targetIndex = opt[i] + 1;
+
+                            if (currentItinerary[originalIndex].isLocked || currentItinerary[targetIndex].isLocked) {
+                                continue; 
+                            }
+                            swap = `將 <span class="text-red-600 font-bold">第 ${originalIndex + 1} 站</span> 與 <span class="text-red-600 font-bold">第 ${targetIndex + 1} 站</span> 互換更省時！`; 
+                            break; 
+                        }
+                    }
+                    
+                    let suggestionHTML = "";
+
+                    // 💡 如您所願：顯示具體的第X站與第Y站互換，並指引他去按最上面的紫按鈕
+                    if (swap) {
+                        suggestionHTML += `
+                            <div class="mt-3 p-3 bg-blue-50 text-blue-800 rounded-lg border border-blue-200 leading-relaxed shadow-sm">
+                                <span class="font-bold">💡 距離建議：</span>${swap} <br>
+                                <span class="text-blue-500 text-[11px]">(可點擊上方 ✨智能最佳化 按鈕一鍵重排)</span>
+                            </div>
+                        `; 
+                    } else if (hasLocks) {
+                        suggestionHTML += `<div class="mt-3 p-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200">🔒 距離建議：在您鎖定的條件下，順序已達最佳化！</div>`;
+                    } else {
+                        suggestionHTML += `<div class="mt-3 p-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200">✅ 距離建議：目前的行程順序已經是最順路的囉！</div>`;
+                    }
+
+                    document.getElementById('ai-suggestion-text').innerHTML += suggestionHTML;
                 }
             });
         }
@@ -442,7 +621,9 @@
                         if (step.travel_mode === 'TRANSIT') { html += `<div class="transit-step"><span class="text-blue-600 font-extrabold text-[13px]">🚌 搭乘 ${step.transit.line.short_name || step.transit.line.name}</span><br><span class="text-[11px] text-slate-500">於 ${step.transit.departure_stop.name} 上車 (約 ${dur})</span></div>`; } else { html += `<div class="transit-step"><span class="text-slate-600 text-[12px]">🚶 ${step.instructions.replace(/Walk to /i, "步行至 ")}</span></div>`; }
                     }); html += `</div>`;
                 } box.innerHTML = html || "✅ 已規劃最佳方案。";
-            } else { box.innerHTML = "<div class='text-[12px]'>✅ 路線已優化。可點擊地圖淺色線條對比時間。</div>"; }
+            } else { 
+                box.innerHTML = `<div class='text-[12px] text-slate-500 mb-1 flex items-center gap-1'>🗺️ 點擊地圖上的淺色線條可切換不同行車路線。</div>`; 
+            }
         }
 
         function toggleDetail(index) { 
@@ -515,15 +696,33 @@
 
         function editNote(id) { const currentItinerary = itineraryData[currentDay]; const item = currentItinerary.find(p => p.id === id); if (item) { const newNote = prompt(`為「${item.name}」加上個人備註（例如：買伴手禮、必吃滷肉飯）：`, item.note || ""); if (newNote !== null) { item.note = newNote; updateUI(); } } }
 
+        function toggleLock(index) {
+            const currentItinerary = itineraryData[currentDay];
+            if (!currentItinerary || !currentItinerary[index]) return;
+            currentItinerary[index].isLocked = !currentItinerary[index].isLocked;
+            updateUI(); 
+
+            if (routeLines.length > 0) {
+                calculateRoute(); 
+            }
+        }
+
         function updateUI() {
-            const currentItinerary = itineraryData[currentDay] || []; const list = document.getElementById('itinerary-list'); document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
+            const currentItinerary = itineraryData[currentDay] || []; 
+            const list = document.getElementById('itinerary-list'); 
+            document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; 
+            document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
+            
+            const aiTimeBtn = document.getElementById('optimize-btn');
+            if (aiTimeBtn) aiTimeBtn.classList.toggle('hidden', currentItinerary.length < 3);
+
             if (currentItinerary.length === 0) { list.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">📍 Day ${currentDay} 尚未新增地點</div>`; return; }
             
             list.innerHTML = currentItinerary.map((p, i) => `
-                <div class="bg-white border-l-4 border-blue-500 rounded-xl p-4 shadow-sm group animate-in slide-in-from-left duration-200">
+                <div class="bg-white border-l-4 ${p.isLocked ? 'border-red-500' : 'border-blue-500'} rounded-xl p-4 shadow-sm group animate-in slide-in-from-left duration-200">
                     <div class="flex justify-between items-center w-full">
                         <div class="flex-1 overflow-hidden">
-                            <p class="text-[11px] text-blue-500 font-bold uppercase tracking-wider">站點 ${i+1}</p>
+                            <p class="text-[11px] ${p.isLocked ? 'text-red-500' : 'text-blue-500'} font-bold uppercase tracking-wider">站點 ${i+1}</p>
                             <div class="flex items-center gap-2">
                                 <p class="font-bold text-slate-800 text-[15px] truncate">${p.name}</p>
                                 <button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0 bg-blue-50 p-1 rounded-full" title="展開/收合資訊">
@@ -534,6 +733,10 @@
                             ${p.note ? `<p class="text-[12px] text-emerald-600 mt-1.5 flex items-center gap-1 font-bold">📝 ${p.note}</p>` : ''}
                         </div>
                         <div class="flex items-center gap-1">
+                            <button onclick="toggleLock(${i})" class="px-2 py-1 rounded text-[11px] font-bold transition-colors ${p.isLocked ? 'bg-red-500 text-white shadow-inner' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}" title="${p.isLocked ? '已鎖定此行程' : '點擊鎖定此行程'}">
+                                ${p.isLocked ? '🔒 已鎖定' : '🔓 鎖定'}
+                            </button>
+                            
                             <button onclick="editNote(${p.id})" class="text-slate-300 hover:text-emerald-500 transition px-1" title="加入個人備註"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                             <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                             <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -569,7 +772,7 @@
                         prompt: promptValue, 
                         mode: currentMode,
                         history: aiChatHistory[currentDay],
-                        all_itineraries: itineraryData // 💡 魔法：把所有天數的行程當作「小抄」傳給後端 AI
+                        all_itineraries: itineraryData 
                     })
                 });
 
@@ -633,7 +836,8 @@
                             note: "",               
                             rating: 5,
                             types: isDashboard ? ['premise'] : ['tourist_attraction'],
-                            reviews: []
+                            reviews: [],
+                            isLocked: false // AI 生成的預設不鎖定
                         });
                     }
 

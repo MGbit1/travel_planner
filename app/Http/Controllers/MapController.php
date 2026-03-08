@@ -63,9 +63,15 @@ class MapController extends Controller
         try {
             $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
 
+            // 💡 手術：加入 CURL_IPRESOLVE_V4 避免 DNS 解析卡死
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->withoutVerifying() 
-                ->timeout(60)
+                ->timeout(120) // 延長超時時間
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4 // 強制使用 IPv4
+                    ]
+                ])
                 ->post($url, [
                     'contents' => [['parts' => [['text' => $prompt]]]]
                 ]);
@@ -90,19 +96,18 @@ class MapController extends Controller
     public function generateAI(Request $request) {
         $userPrompt = $request->input('prompt');
         $history = $request->input('history', []); 
-        $allItineraries = $request->input('all_itineraries', []); // 👈 接收前端傳來的小抄
+        $allItineraries = $request->input('all_itineraries', []); 
         $apiKey = trim(env('GEMINI_API_KEY'));
     
         if (empty($apiKey)) {
             return response()->json(['status' => 'error', 'message' => '系統找不到 API 金鑰，請確認 .env 設定！'], 500);
         }
 
-        // 💡 魔法處理：將所有天數的行程，整理成 AI 看得懂的文字小抄
+        // 整理跨天數小抄
         $itineraryContext = "【目前系統中其他天數的已規劃行程】：\n";
         $hasData = false;
         foreach ($allItineraries as $day => $points) {
             if (!empty($points)) {
-                // 把該天所有的景點名稱抽出來，串成 A -> B -> C
                 $names = array_column($points, 'name');
                 $itineraryContext .= "Day {$day}: " . implode(' ➔ ', $names) . "\n";
                 $hasData = true;
@@ -110,7 +115,7 @@ class MapController extends Controller
         }
         if (!$hasData) $itineraryContext .= "尚無資料。\n";
        
-        // 💡 系統規則 (加入小抄與跨天數複製規則)
+        // 系統規則
         $systemRules = "你是一位專業旅遊規劃師。請根據使用者需求規劃順路行程。\n" .
                        $itineraryContext . "\n" .
                        "【⚠️ 重要規則】：\n" .
@@ -138,10 +143,7 @@ class MapController extends Controller
                        "  ]\n" .
                        "}";
     
-        // 準備傳給 Google 的對話陣列
         $contents = [];
-
-        // 把歷史記憶倒進去
         foreach ($history as $msg) {
             $contents[] = [
                 'role' => $msg['role'] === 'user' ? 'user' : 'model',
@@ -157,9 +159,15 @@ class MapController extends Controller
         try {
             $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
     
+            // 💡 手術核心：延長為 120 秒，且強制使用 IPv4，避開 DNS 黑洞
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->withoutVerifying()
-                ->timeout(60)
+                ->timeout(120) // 給予 AI 更充足的思考時間
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4 // 終極殺招：強制走 IPv4
+                    ]
+                ])
                 ->post($url, [
                     'contents' => $contents
                 ]);
