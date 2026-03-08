@@ -50,16 +50,18 @@
         <div class="w-80 md:w-[420px] bg-white shadow-2xl z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
             
             <div class="p-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center shadow-md relative z-30">
-                <div>
+                <a href="/" class="hover:scale-105 transition-transform block">
                     <h1 class="text-xl font-bold flex items-center gap-2"><span>🚀</span> AI 旅程大師</h1>
                     <p class="text-blue-100 text-[10px] mt-0.5">Multi-Day Smart Planning</p>
-                </div>
+                </a>
                 
                 <div class="flex items-center gap-3">
                     @if (Route::has('login'))
                         @auth
                             <div class="flex flex-col items-end">
-                                <span class="text-[11px] text-blue-100 font-bold truncate max-w-[80px]">Hi, {{ Auth::user()->name }}</span>
+                                <a href="{{ route('dashboard') }}" class="text-[11px] text-blue-100 font-bold hover:text-white transition flex items-center gap-1">
+                                    <span>⚙️</span> 控制台
+                                </a>
                                 <form method="POST" action="{{ route('logout') }}" class="mt-0.5">
                                     @csrf
                                     <button type="submit" class="text-[10px] text-blue-200 hover:text-white transition underline">登出帳號</button>
@@ -83,8 +85,7 @@
 
             <div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                 
-                <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="day-tabs-container">
-                    </div>
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="day-tabs-container"></div>
 
                 <div class="space-y-3 relative">
                     <label class="text-xs font-bold text-slate-400 uppercase tracking-widest">🔍 探索景點或地址</label>
@@ -157,8 +158,12 @@
     </div>
 
     <script>
-        // 💡 抓取 Laravel 的登入狀態，傳給 JavaScript
+        // 💡 抓取 Laravel 傳遞過來的資料
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+        
+        // 接收從 Controller 傳過來的行程資料與標題
+        const loadedTripJson = {!! json_encode($loadedTrip ? $loadedTrip->itinerary_data : null) !!};
+        const loadedTripTitle = {!! json_encode($loadedTrip ? $loadedTrip->title : null) !!};
 
         let map, service, geocoder, directionsService, trafficLayer;
         let itineraryData = { 1: [] };
@@ -195,14 +200,69 @@
             const autocomplete = new google.maps.places.Autocomplete(input, { fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] });
             autocomplete.addListener("place_changed", () => { const place = autocomplete.getPlace(); if (place.geometry) { processNewPlace(place); input.value = ""; } });
 
-            renderDayTabs(); updateUI(); 
+            // 💡 魔法判斷：如果有傳入舊行程，就發動還原魔法！
+            if (loadedTripJson) {
+                restoreLoadedTrip();
+            } else {
+                renderDayTabs(); 
+                updateUI(); 
+            }
         }
 
-        // 💡 修改存檔邏輯，加入登入防呆檢查
+        // 💡 神級還原魔法函數
+        function restoreLoadedTrip() {
+            itineraryData = {};
+            let maxDay = 1;
+            let bounds = new google.maps.LatLngBounds();
+            let hasPoints = false;
+
+            // 把 JSON 字串轉換回正港的 Google Maps LatLng 物件
+            for (let dayStr in loadedTripJson) {
+                let dayNum = parseInt(dayStr);
+                if (dayNum > maxDay) maxDay = dayNum;
+                
+                itineraryData[dayNum] = loadedTripJson[dayStr].map(point => {
+                    // 把 {lat: 24.1, lng: 120.6} 轉回真正的地圖經緯度物件
+                    let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
+                    bounds.extend(realLocation);
+                    hasPoints = true;
+
+                    return {
+                        ...point,
+                        location: realLocation
+                    };
+                });
+            }
+            
+            dayCount = maxDay;
+            currentDay = 1; // 預設跳回第一天
+            
+            renderDayTabs();
+            updateUI();
+            
+            // 把地圖視角自動縮放到可以包住所有景點的範圍
+            if (hasPoints) {
+                map.fitBounds(bounds);
+                refreshMarkersOnly();
+                // 自動幫他畫出第一天的線
+                if (itineraryData[currentDay].length >= 2) {
+                    calculateRoute();
+                }
+            }
+
+            // 在標題顯示這是載入的行程
+            setTimeout(() => {
+                const label = document.getElementById('current-day-label');
+                if(label) {
+                    label.innerHTML = `📍 Day 1 行程 <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md ml-2 border border-indigo-200">📂 ${loadedTripTitle}</span>`;
+                }
+            }, 100);
+        }
+
         async function saveFullTrip() {
             if (!isLoggedIn) {
                 alert("🔒 請先「登入或註冊」，才能將專屬行程存入您的帳號喔！");
-                window.location.href = "{{ route('login') }}"; // 自動導向登入頁面
+                window.location.href = "{{ route('login') }}"; 
                 return;
             }
 
@@ -215,7 +275,9 @@
                 return;
             }
 
-            const title = prompt("請為這趟旅程取個名字：", "我的超讚旅行");
+            // 如果原本是載入進來的行程，就預設填上原本的標題
+            const defaultTitle = loadedTripTitle ? loadedTripTitle + " (修改版)" : "我的超讚旅行";
+            const title = prompt("請為這趟旅程取個名字：", defaultTitle);
             if (!title) return;
 
             const payload = {
@@ -238,7 +300,7 @@
                 const result = await response.json();
                 
                 if (response.ok && result.status === 'success') {
-                    alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！ (ID: " + result.id + ")");
+                    alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！");
                 } else {
                     console.error("Server Error:", result);
                     alert("❌ 儲存失敗，請檢查後端錯誤：\n" + (result.message || JSON.stringify(result)));
@@ -322,12 +384,21 @@
             updateUI(); 
             refreshMarkersOnly(); 
             document.getElementById('ai-suggestion-box').classList.add('hidden'); 
-            document.getElementById('current-day-label').innerText = `📍 Day ${currentDay} 行程`; 
+            
+            // 💡 若有載入標題，切換天數時依然保留
+            let titleTag = (loadedTripTitle && currentDay === 1) ? `<span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md ml-2 border border-indigo-200">📂 ${loadedTripTitle}</span>` : '';
+            document.getElementById('current-day-label').innerHTML = `📍 Day ${currentDay} 行程 ${titleTag}`; 
+            
             document.getElementById('btn-day-num').innerText = currentDay; 
 
             document.getElementById('pac-input').value = searchDrafts[currentDay] || '';
             document.getElementById('ai-chat-prompt').value = aiPromptDrafts[currentDay] || '';
             document.getElementById('search-results-panel').classList.remove('active');
+            
+            // 自動為切換的天數計算路徑
+            if (itineraryData[currentDay].length >= 2) {
+                calculateRoute();
+            }
         }
         
         function addNewDay() { dayCount++; itineraryData[dayCount] = []; switchDay(dayCount); }
