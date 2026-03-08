@@ -13,8 +13,10 @@ return new class extends Migration
     {
         Schema::create('trips', function (Blueprint $table) {
             $table->id();
+            // 💡 綁定會員：知道是哪個使用者存的行程，如果使用者刪除帳號，行程也跟著刪除
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); 
             $table->string('title'); // 行程標題
-            $table->json('itinerary_data'); // ⭐ 關鍵：存地圖資料
+            $table->json('itinerary_data'); // 存放所有天數的景點與規劃資料
             $table->timestamps();
         });
     }
