@@ -8,7 +8,8 @@
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvAAdWjnxCHy6kfojvWq4iO4wKHOl14eY&libraries=places,marker&v=beta&language=zh-TW"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvAAdWjnxCHy6kfojvWq4iO4wKHOl14eY&libraries=places,marker&v=beta&language=zh-TW&callback=initMap" async defer></script>
 
     <style>
         #map { height: 100vh; width: 100%; }
@@ -42,6 +43,9 @@
         .diff-slower { color: #64748b; border-color: #94a3b8; }
         .transit-step { border-left: 2.5px dashed #cbd5e1; margin-left: 10px; padding-left: 15px; position: relative; margin-bottom: 12px; }
         .transit-step::before { content: ''; position: absolute; left: -6.5px; top: 0; width: 10px; height: 10px; background: #94a3b8; border-radius: 50%; border: 2px solid white; }
+
+        @keyframes bounce-short { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .animate-bounce-short { animation: bounce-short 2s ease-in-out infinite; }
     </style>
 </head>
 <body class="bg-slate-50 font-sans">
@@ -106,7 +110,7 @@
 
                 <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 shadow-sm space-y-3 my-4 animate-in fade-in">
                     <label class="text-[11px] font-bold text-indigo-800 uppercase tracking-widest flex items-center gap-2">
-                        <span class="text-base">🤖</span> AI 智慧行程助手
+                        <span class="text-base">🤖</span> AI 智慧行程助手 (含停車/雨天備案)
                     </label>
                     <textarea id="ai-chat-prompt" rows="2" 
                         class="w-full border border-indigo-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none custom-scrollbar" 
@@ -146,22 +150,33 @@
                     </button>
                 </div>
 
-                <div id="ai-suggestion-box" class="hidden p-5 bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm animate-in fade-in mt-4">
-                    <h3 class="text-indigo-800 font-bold text-[13px] mb-3 flex items-center gap-1">🤖 AI 即時導引與建議</h3>
-                    <div id="ai-suggestion-text" class="text-[12px] text-indigo-900 leading-relaxed space-y-4"></div>
+                <div id="ai-summary-container" class="hidden animate-in fade-in mt-4">
+                    <div id="ai-itinerary-summary"></div>
+                </div>
+
+                <div id="ai-suggestion-box" class="hidden p-0 animate-in fade-in mt-4">
+                    <div id="ai-time-suggestion"></div>
+                    
+                    <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm mt-3">
+                        <h3 class="text-slate-800 font-bold text-[13px] mb-3 flex items-center gap-1">🤖 AI 即時導引與建議</h3>
+                        <div id="ai-map-instruction" class="text-[12px] text-slate-600 leading-relaxed space-y-4">
+                            <div id="ai-map-instruction-content"></div>
+                            <div id="ai-distance-suggestion"></div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
         </div>
 
-        <div class="flex-1 relative"><div id="map"></div><button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white px-3 py-2 rounded-lg shadow-md z-10 text-[13px] font-bold hover:bg-slate-50 transition border border-slate-200">🚦 即時路況</button></div>
+        <div class="flex-1 relative">
+            <div id="map"></div>
+            <button onclick="toggleTraffic()" class="absolute top-4 right-14 bg-white px-3 py-2 rounded-lg shadow-md z-10 text-[13px] font-bold hover:bg-slate-50 transition border border-slate-200">🚦 即時路況</button>
+        </div>
     </div>
 
     <script>
-        // 💡 抓取 Laravel 傳遞過來的資料
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
-        
-        // 接收從 Controller 傳過來的行程資料與標題
         const loadedTripJson = {!! json_encode($loadedTrip ? $loadedTrip->itinerary_data : null) !!};
         const loadedTripTitle = {!! json_encode($loadedTrip ? $loadedTrip->title : null) !!};
 
@@ -178,6 +193,7 @@
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
         let lastShownDetailId = null;
         let tempOptimizedItinerary = null; 
+        let currentAnalysisId = 0; 
 
         const colorPalette = ["#7c3aed", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#06b6d4"];
 
@@ -200,7 +216,6 @@
             const autocomplete = new google.maps.places.Autocomplete(input, { fields: ["name", "geometry", "place_id", "photos", "reviews", "types", "rating", "user_ratings_total", "formatted_address"] });
             autocomplete.addListener("place_changed", () => { const place = autocomplete.getPlace(); if (place.geometry) { processNewPlace(place); input.value = ""; } });
 
-            // 💡 魔法判斷：如果有傳入舊行程，就發動還原魔法！
             if (loadedTripJson) {
                 restoreLoadedTrip();
             } else {
@@ -209,20 +224,17 @@
             }
         }
 
-        // 💡 神級還原魔法函數
         function restoreLoadedTrip() {
             itineraryData = {};
             let maxDay = 1;
             let bounds = new google.maps.LatLngBounds();
             let hasPoints = false;
 
-            // 把 JSON 字串轉換回正港的 Google Maps LatLng 物件
             for (let dayStr in loadedTripJson) {
                 let dayNum = parseInt(dayStr);
                 if (dayNum > maxDay) maxDay = dayNum;
                 
                 itineraryData[dayNum] = loadedTripJson[dayStr].map(point => {
-                    // 把 {lat: 24.1, lng: 120.6} 轉回真正的地圖經緯度物件
                     let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
                     bounds.extend(realLocation);
                     hasPoints = true;
@@ -235,22 +247,19 @@
             }
             
             dayCount = maxDay;
-            currentDay = 1; // 預設跳回第一天
+            currentDay = 1; 
             
             renderDayTabs();
             updateUI();
             
-            // 把地圖視角自動縮放到可以包住所有景點的範圍
             if (hasPoints) {
                 map.fitBounds(bounds);
                 refreshMarkersOnly();
-                // 自動幫他畫出第一天的線
                 if (itineraryData[currentDay].length >= 2) {
                     calculateRoute();
                 }
             }
 
-            // 在標題顯示這是載入的行程
             setTimeout(() => {
                 const label = document.getElementById('current-day-label');
                 if(label) {
@@ -275,7 +284,6 @@
                 return;
             }
 
-            // 如果原本是載入進來的行程，就預設填上原本的標題
             const defaultTitle = loadedTripTitle ? loadedTripTitle + " (修改版)" : "我的超讚旅行";
             const title = prompt("請為這趟旅程取個名字：", defaultTitle);
             if (!title) return;
@@ -302,12 +310,10 @@
                 if (response.ok && result.status === 'success') {
                     alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！");
                 } else {
-                    console.error("Server Error:", result);
                     alert("❌ 儲存失敗，請檢查後端錯誤：\n" + (result.message || JSON.stringify(result)));
                 }
             } catch (error) {
-                console.error("Network Error:", error);
-                alert("🚨 發生連線錯誤，請確認 Laravel 伺服器 (php artisan serve) 有在運行。");
+                alert("🚨 發生連線錯誤，請確認 Laravel 伺服器有在運行。");
             }
         }
 
@@ -362,7 +368,11 @@
             renderDayTabs(); 
             updateUI(); 
             refreshMarkersOnly(); 
+            
+            // 💡 手術刀：切換天數時隱藏提示
             document.getElementById('ai-suggestion-box').classList.add('hidden'); 
+            document.getElementById('ai-summary-container').classList.add('hidden');
+            
             document.getElementById('current-day-label').innerText = `📍 Day ${currentDay} 行程`; 
             document.getElementById('btn-day-num').innerText = currentDay; 
 
@@ -383,9 +393,11 @@
             renderDayTabs(); 
             updateUI(); 
             refreshMarkersOnly(); 
-            document.getElementById('ai-suggestion-box').classList.add('hidden'); 
             
-            // 💡 若有載入標題，切換天數時依然保留
+            // 💡 手術刀：切換天數時隱藏提示
+            document.getElementById('ai-suggestion-box').classList.add('hidden'); 
+            document.getElementById('ai-summary-container').classList.add('hidden');
+            
             let titleTag = (loadedTripTitle && currentDay === 1) ? `<span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md ml-2 border border-indigo-200">📂 ${loadedTripTitle}</span>` : '';
             document.getElementById('current-day-label').innerHTML = `📍 Day ${currentDay} 行程 ${titleTag}`; 
             
@@ -395,7 +407,6 @@
             document.getElementById('ai-chat-prompt').value = aiPromptDrafts[currentDay] || '';
             document.getElementById('search-results-panel').classList.remove('active');
             
-            // 自動為切換的天數計算路徑
             if (itineraryData[currentDay].length >= 2) {
                 calculateRoute();
             }
@@ -426,7 +437,17 @@
             updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
 
-        function clearAllRoutes() { routeLines.forEach(l => l.setMap(null)); routeLabels.forEach(l => l.setMap(null)); routeLines = []; routeLabels = []; document.getElementById('ai-suggestion-box').classList.add('hidden'); document.getElementById('route-toggles').classList.add('hidden'); visibleLegs.clear(); selectedRoutesMap = {}; }
+        function clearAllRoutes() { 
+            routeLines.forEach(l => l.setMap(null)); 
+            routeLabels.forEach(l => l.setMap(null)); 
+            routeLines = []; 
+            routeLabels = []; 
+            document.getElementById('ai-suggestion-box').classList.add('hidden'); 
+            // 💡 手術刀：清除路徑時，千萬不要隱藏黃色提醒框 (ai-summary-container)！
+            document.getElementById('route-toggles').classList.add('hidden'); 
+            visibleLegs.clear(); 
+            selectedRoutesMap = {}; 
+        }
 
         function refreshMarkersOnly() {
             markers.forEach(m => m.setMap(null)); markers = []; const counts = {}; const currentItinerary = itineraryData[currentDay] || [];
@@ -441,16 +462,21 @@
         async function calculateRoute() {
             const currentItinerary = itineraryData[currentDay] || []; if (currentItinerary.length < 2) return;
             clearAllRoutes(); document.getElementById('route-toggles').classList.remove('hidden');
-            const aiBox = document.getElementById('ai-suggestion-box'), aiText = document.getElementById('ai-suggestion-text');
-            aiBox.classList.remove('hidden'); aiText.innerHTML = `正在計算 Day ${currentDay} 最佳路徑...`;
+            
+            const aiBox = document.getElementById('ai-suggestion-box');
+            aiBox.classList.remove('hidden'); 
+            
+            document.getElementById('ai-map-instruction-content').innerHTML = `<div class="text-[12px] text-slate-500 mb-2">正在計算 Day ${currentDay} 最佳路徑...</div>`;
+            document.getElementById('ai-distance-suggestion').innerHTML = '';
+            document.getElementById('ai-time-suggestion').innerHTML = '';
+
             for(let i=0; i < currentItinerary.length - 1; i++) { visibleLegs.add(i); selectedRoutesMap[i] = { index: 0, result: null }; }
             updateRouteToggleUI(); 
             for (let i = 0; i < currentItinerary.length - 1; i++) {
                 const results = await requestRouteByMode(currentItinerary[i].location, currentItinerary[i+1].location, currentMode);
-                if (results && results.routes) { selectedRoutesMap[i].result = results; drawLeg(results.routes, i); } else { aiText.innerHTML = `<span class="text-red-500 font-bold">❌ 第 ${i+1} 段計算失敗。</span>`; return; }
+                if (results && results.routes) { selectedRoutesMap[i].result = results; drawLeg(results.routes, i); } else { document.getElementById('ai-map-instruction-content').innerHTML = `<span class="text-red-500 font-bold">❌ 第 ${i+1} 段計算失敗。</span>`; return; }
             }
             renderAISuggestions(); updateRouteVisibility(); 
-            
             checkOptimalRouteSuggestion(); 
             analyzeTimeSuitabilityInBackground(); 
         }
@@ -459,13 +485,16 @@
             const currentItinerary = itineraryData[currentDay] || [];
             if (currentItinerary.length < 2) return;
 
+            let myAnalysisId = ++currentAnalysisId;
             let placesList = currentItinerary.map((p, index) => `第 ${index + 1} 站：${p.name}`).join(' -> ');
-            let promptValue = `使用者目前的行程順序是：${placesList}。請以專業導遊的身份，簡短檢查這個順序的「日夜時間合適度」。如果有明顯不適合的時間（例如早上排夜市、中午看夜景），請特別提醒「第X站的OOO建議在O上/下午/晚上去比較適合」。如果時間安排看起來很合理，請說「日夜時間安排看起來很順暢喔！」。請保持簡短扼要，大約一兩句話即可，不要重新排列表格。`;
+            
+            let promptValue = `使用者目前的行程順序是：${placesList}。請簡短檢查這個順序的「日夜時間合適度」。請將所有需要提醒的地點統整成「一段流暢的完整建議」，字數約 50 字以內。如果時間安排看起來很合理，請直接說「日夜時間安排看起來很順暢喔！」。絕對不要使用條列式。`;
 
             try {
-                const box = document.getElementById('ai-suggestion-text');
-                const loadingId = 'ai-time-loading-' + Date.now();
-                box.innerHTML += `<div id="${loadingId}" class="mt-3 text-indigo-500 text-[12px] animate-pulse flex items-center gap-1"><span>🧠</span> AI 正在評估各景點的最佳造訪時間...</div>`;
+                const box = document.getElementById('ai-time-suggestion');
+                if(!box) return;
+                
+                box.innerHTML = `<div class="mt-3 text-indigo-500 text-[12px] animate-pulse flex items-center gap-1"><span>🧠</span> AI 正在評估最佳造訪時間...</div>`;
 
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
@@ -481,21 +510,22 @@
                     })
                 });
 
+                if (myAnalysisId !== currentAnalysisId) return; 
+
                 const data = await response.json();
-                
-                const loadingEl = document.getElementById(loadingId);
-                if(loadingEl) loadingEl.remove();
 
                 if (response.ok && data.status === 'success') {
-                    box.innerHTML += `<div class="mt-3 p-3 bg-indigo-50 text-indigo-800 text-[12px] font-bold rounded-lg border border-indigo-200 shadow-sm leading-relaxed">
+                    box.innerHTML = `<div class="mt-3 p-3 bg-indigo-50 text-indigo-800 text-[12px] font-bold rounded-lg border border-indigo-200 shadow-sm leading-relaxed">
                         <div class="flex items-center gap-1 mb-1 text-[13px]"><span>🕒</span> 日夜時間提醒：</div>
                         ${data.ai_message}
                     </div>`;
+                } else {
+                    box.innerHTML = '';
                 }
             } catch (error) {
-                console.error("AI 時間分析失敗", error);
-                const loadingEl = document.getElementById(loadingId);
-                if(loadingEl) loadingEl.remove();
+                console.error(error);
+                const box = document.getElementById('ai-time-suggestion');
+                if(box) box.innerHTML = '';
             }
         }
 
@@ -507,7 +537,7 @@
                 return `第 ${index + 1} 站：${p.name} ${p.isLocked ? '(此站順序【絕對不可變動】)' : ''}`;
             }).join('\n');
 
-            let promptValue = `我已經選定了以下 ${currentItinerary.length} 個景點（依照目前順序）：\n${placesList}\n\n請發揮專業導遊的能力，根據「各景點最適合的日夜時間（如夜市/看夜景必須在晚上）」與「交通順路程度」幫我重新排序，找出最完美的走法。\n\n【嚴格約束條件】：\n1. 標示為【絕對不可變動】的景點，絕對不能改變它在清單中的順序！\n2. 請務必使用原景點名稱，不要新增或刪除。\n3. 直接給我排好的最佳清單與專業理由。`;
+            let promptValue = `我已經選定了以下 ${currentItinerary.length} 個景點（依照目前順序）：\n${placesList}\n\n請發揮專業導遊的能力，根據「各景點最適合的日夜時間（如夜市/看夜景必須在晚上）」與「交通順路程度」幫我重新排序，找出最完美的走法。\n\n【嚴格約束條件】：\n1. 標示為【絕對不可變動】的景點，絕對不能改變它在清單中的順序！\n2. 請務必使用原景點名稱，不要新增或刪除。\n3. 給我排好的清單。`;
 
             const btn = document.getElementById('optimize-btn');
             const originalText = btn.innerHTML;
@@ -535,8 +565,10 @@
                 if (response.ok && data.status === 'success') {
                     let newOrder = [];
                     let unmatched = [...currentItinerary];
+                    
+                    let suggestions = data.days && data.days.length > 0 ? data.days[0].suggestions : (data.suggestions || []);
 
-                    data.suggestions.forEach(aiItem => {
+                    suggestions.forEach(aiItem => {
                         let matchIndex = unmatched.findIndex(p => aiItem.name.includes(p.name) || p.name.includes(aiItem.name) || aiItem.name === p.name);
                         if (matchIndex !== -1) {
                             let modeEmoji = '🚗';
@@ -546,6 +578,8 @@
                             else if (data.travel_mode === 'WALKING') modeEmoji = '🚶';
 
                             let travel = (newOrder.length === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
+                            
+                            // 💡 手術刀：完美復原時間規劃邏輯，確保有值才顯示
                             let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
                             let cost = aiItem.cost_estimate ? `💰 ${aiItem.cost_estimate}` : '';
                             let reason = aiItem.reason ? `💡 ${aiItem.reason}` : '';
@@ -563,12 +597,11 @@
                     refreshMarkersOnly(); 
                     calculateRoute();
                     
-                    alert("✨ 智能一鍵順路最佳化完成！已為您排好完美時間與路線。");
+                    alert("✨ 智能一鍵順路最佳化完成！");
                 } else {
                     alert("❌ 最佳化失敗：" + (data.message || "請檢查 API 設定"));
                 }
             } catch (error) {
-                console.error(error);
                 alert("🚨 連線異常，請確認 Laravel 伺服器運作中");
             } finally {
                 btn.disabled = false;
@@ -668,6 +701,7 @@
             if (currentMode === 'TWO_WHEELER') { 
                 request.travelMode = google.maps.TravelMode.DRIVING; 
                 request.avoidHighways = true; 
+                request.avoidTolls = true; 
             }
             
             directionsService.route(request, (res, status) => {
@@ -704,13 +738,18 @@
                         suggestionHTML += `<div class="mt-3 p-2 bg-emerald-50 text-emerald-700 font-bold rounded-lg border border-emerald-200">✅ 距離建議：目前的行程順序已經是最順路的囉！</div>`;
                     }
 
-                    document.getElementById('ai-suggestion-text').innerHTML += suggestionHTML;
+                    const distBox = document.getElementById('ai-distance-suggestion');
+                    if(distBox) distBox.innerHTML = suggestionHTML;
                 }
             });
         }
 
         function renderAISuggestions() {
-            const currentItinerary = itineraryData[currentDay] || []; const box = document.getElementById('ai-suggestion-text'); let html = "";
+            const currentItinerary = itineraryData[currentDay] || []; 
+            const box = document.getElementById('ai-map-instruction-content'); 
+            if(!box) return;
+            
+            let html = "";
             if (currentMode === 'TRANSIT') {
                 for (let i = 0; i < currentItinerary.length - 1; i++) {
                     if (!visibleLegs.has(i) || !selectedRoutesMap[i].result) continue; const leg = selectedRoutesMap[i].result.routes[selectedRoutesMap[i].index].legs[0];
@@ -719,9 +758,9 @@
                         const dur = step.duration.text.replace("mins", "分鐘");
                         if (step.travel_mode === 'TRANSIT') { html += `<div class="transit-step"><span class="text-blue-600 font-extrabold text-[13px]">🚌 搭乘 ${step.transit.line.short_name || step.transit.line.name}</span><br><span class="text-[11px] text-slate-500">於 ${step.transit.departure_stop.name} 上車 (約 ${dur})</span></div>`; } else { html += `<div class="transit-step"><span class="text-slate-600 text-[12px]">🚶 ${step.instructions.replace(/Walk to /i, "步行至 ")}</span></div>`; }
                     }); html += `</div>`;
-                } box.innerHTML = html || "✅ 已規劃最佳方案。";
+                } box.innerHTML = html || "✅ 已規劃最佳方案。"; 
             } else { 
-                box.innerHTML = `<div class='text-[12px] text-slate-500 mb-1 flex items-center gap-1'>🗺️ 點擊地圖上的淺色線條可切換不同行車路線。</div>`; 
+                box.innerHTML = `<span class='flex items-center gap-1'>🗺️ 點擊地圖上的淺色線條可切換不同行車路線。</span>`; 
             }
         }
 
@@ -811,40 +850,49 @@
             const list = document.getElementById('itinerary-list'); 
             document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; 
             document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
-            
-            const aiTimeBtn = document.getElementById('optimize-btn');
-            if (aiTimeBtn) aiTimeBtn.classList.toggle('hidden', currentItinerary.length < 3);
+            document.getElementById('optimize-btn').classList.toggle('hidden', currentItinerary.length < 3);
 
             if (currentItinerary.length === 0) { list.innerHTML = `<div class="text-center text-slate-400 py-8 text-sm">📍 Day ${currentDay} 尚未新增地點</div>`; return; }
             
-            list.innerHTML = currentItinerary.map((p, i) => `
+            list.innerHTML = currentItinerary.map((p, i) => {
+                const hasParkingNote = p.ai_description && (p.ai_description.includes('停車') || p.ai_description.includes('找車位'));
+                const isFree = p.ai_description && p.ai_description.includes('$0');
+
+                return `
                 <div class="bg-white border-l-4 ${p.isLocked ? 'border-red-500' : 'border-blue-500'} rounded-xl p-4 shadow-sm group animate-in slide-in-from-left duration-200">
-                    <div class="flex justify-between items-center w-full">
+                    <div class="flex justify-between items-start w-full">
                         <div class="flex-1 overflow-hidden">
-                            <p class="text-[11px] ${p.isLocked ? 'text-red-500' : 'text-blue-500'} font-bold uppercase tracking-wider">站點 ${i+1}</p>
+                            <p class="text-[11px] ${p.isLocked ? 'text-red-500' : 'text-blue-500'} font-bold uppercase tracking-wider mb-1">站點 ${i+1}</p>
                             <div class="flex items-center gap-2">
                                 <p class="font-bold text-slate-800 text-[15px] truncate">${p.name}</p>
-                                <button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0 bg-blue-50 p-1 rounded-full" title="展開/收合資訊">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                </button>
+                                <button onclick="toggleDetail(${i})" class="text-blue-500 hover:text-blue-700 transition flex-shrink-0 bg-blue-50 p-1 rounded-full"><i class="bi bi-info-circle"></i></button>
                             </div>
-                            ${p.ai_description ? `<div class="mt-1.5 bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-1.5 rounded-lg inline-block border border-indigo-100">🤖 ${p.ai_description}</div>` : ''}
+                            
+                            ${p.ai_description ? `
+                                <div class="mt-1.5 bg-indigo-50 text-indigo-700 text-[11px] font-bold px-2.5 py-1.5 rounded-lg inline-block border border-indigo-100">
+                                    <i class="bi bi-robot"></i> ${p.ai_description.split('｜').map(text => {
+                                        if(text.includes('$')) return `<span class="${isFree ? 'text-emerald-600' : 'text-red-500'} font-black">${text}</span>`;
+                                        return text;
+                                    }).join(' ｜ ')}
+                                </div>
+                            ` : ''}
+
+                            ${hasParkingNote ? `<div class="mt-1 flex items-center gap-1 text-blue-600 font-bold" style="font-size: 10px;"><i class="bi bi-p-square-fill"></i> 停車建議：已預留找位緩衝</div>` : ''}
                             ${p.note ? `<p class="text-[12px] text-emerald-600 mt-1.5 flex items-center gap-1 font-bold">📝 ${p.note}</p>` : ''}
                         </div>
                         <div class="flex items-center gap-1">
-                            <button onclick="toggleLock(${i})" class="px-2 py-1 rounded text-[11px] font-bold transition-colors ${p.isLocked ? 'bg-red-500 text-white shadow-inner' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}" title="${p.isLocked ? '已鎖定此行程' : '點擊鎖定此行程'}">
+                            <button onclick="toggleLock(${i})" class="px-2 py-1 rounded text-[11px] font-bold ${p.isLocked ? 'bg-red-500 text-white shadow-inner' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}">
                                 ${p.isLocked ? '🔒 已鎖定' : '🔓 鎖定'}
                             </button>
-                            
-                            <button onclick="editNote(${p.id})" class="text-slate-300 hover:text-emerald-500 transition px-1" title="加入個人備註"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                            <button onclick="editNote(${p.id})" class="text-slate-300 hover:text-emerald-500 transition px-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                             <button onclick="moveItem(${i}, -1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === 0 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                             <button onclick="moveItem(${i}, 1)" class="move-btn p-1 text-slate-300 hover:text-blue-600 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                             <button onclick="removeItem(${p.id})" class="text-slate-200 hover:text-red-500 transition px-1 ml-1">✕</button>
                         </div>
                     </div>
-                    
                     <div id="item-detail-${i}" class="hidden w-full mt-3 pt-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200"></div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
         }
 
         async function askAIForItinerary() {
@@ -856,7 +904,7 @@
             
             btn.disabled = true;
             btn.classList.add('opacity-70');
-            btnText.innerText = "AI 正在規劃中...";
+            btnText.innerText = "正在精算停車與備案...";
 
             try {
                 if (!aiChatHistory[currentDay]) aiChatHistory[currentDay] = [];
@@ -879,9 +927,8 @@
                 
                 if (response.ok && data.status === 'success') {
                     
-                    let routeNames = data.suggestions.map(s => s.name).join(' ➔ ');
                     aiChatHistory[currentDay].push({ role: 'user', text: promptValue });
-                    aiChatHistory[currentDay].push({ role: 'model', text: `我為你規劃了行程：${routeNames}。總結：${data.ai_message}` });
+                    aiChatHistory[currentDay].push({ role: 'model', text: `行程規劃完畢。總結：${data.ai_message}` });
 
                     if (data.travel_mode) {
                         currentMode = data.travel_mode;
@@ -890,65 +937,58 @@
                         if (activeBtn) activeBtn.classList.add('active');
                     }
 
-                    let newPoints = [];
-                    for (let index = 0; index < data.suggestions.length; index++) {
-                        let item = data.suggestions[index];
-                        let isDashboard = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
-                        
-                        let finalLocation = new google.maps.LatLng(item.lat, item.lng);
+                    if (data.days && data.days.length > 0) {
+                        let highestDay = 1;
+                        for (let dayObj of data.days) {
+                            let dayNum = parseInt(dayObj.day) || 1;
+                            if (dayNum > highestDay) highestDay = dayNum;
+                            let newPoints = [];
+                            for (let index = 0; index < dayObj.suggestions.length; index++) {
+                                let item = dayObj.suggestions[index];
+                                let isDashboard = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
+                                let finalLocation = new google.maps.LatLng(item.lat, item.lng);
+                                if (isDashboard) {
+                                    await new Promise((resolve) => { geocoder.geocode({ address: item.name }, (results, status) => { if (status === 'OK' && results[0]) finalLocation = results[0].geometry.location; resolve(); }); });
+                                }
+                                let modeEmoji = (data.travel_mode === 'TWO_WHEELER') ? '🛵' : '🚗';
+                                let travel = (index === 0) ? '📍 出發點' : (item.travel_time ? `${modeEmoji} ${item.travel_time}` : '');
+                                
+                                // 💡 手術刀：完美復原時間規劃邏輯，確保有值才顯示
+                                let stay = item.stay_time ? `⏱️ ${item.stay_time}` : '';
+                                let cost = item.cost_estimate ? `💰 ${item.cost_estimate}` : '';
+                                let reason = item.reason ? `💡 ${item.reason}` : '';
+                                
+                                let aiDesc = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
 
-                        if (isDashboard) {
-                            if (index === data.suggestions.length - 1 && newPoints.length > 0) {
-                                finalLocation = newPoints[0].location;
-                            } else {
-                                await new Promise((resolve) => {
-                                    geocoder.geocode({ address: item.name }, (results, status) => {
-                                        if (status === 'OK' && results[0]) {
-                                            finalLocation = results[0].geometry.location;
-                                        }
-                                        resolve();
-                                    });
+                                newPoints.push({
+                                    id: Date.now() + index + (dayNum * 1000),
+                                    name: item.name, location: finalLocation, ai_description: aiDesc,
+                                    note: "", rating: 5, types: isDashboard ? ['premise'] : ['tourist_attraction'],
+                                    reviews: [], isLocked: false
                                 });
                             }
+                            itineraryData[dayNum] = newPoints;
                         }
-
-                        let isFirstStop = index === 0;
-                        
-                        let modeEmoji = '🚗';
-                        if (data.travel_mode === 'TWO_WHEELER') modeEmoji = '🛵';
-                        else if (data.travel_mode === 'TRANSIT') modeEmoji = '🚌';
-                        else if (data.travel_mode === 'BICYCLING') modeEmoji = '🚲';
-                        else if (data.travel_mode === 'WALKING') modeEmoji = '🚶';
-
-                        let travel = isFirstStop ? '📍 出發點' : (item.travel_time ? `${modeEmoji} ${item.travel_time}` : '');
-                        let stay = item.stay_time ? `⏱️ ${item.stay_time}` : '';
-                        let cost = item.cost_estimate ? `💰 ${item.cost_estimate}` : '';
-                        let reason = item.reason ? `💡 ${item.reason}` : '';
-                        
-                        let aiDesc = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
-
-                        newPoints.push({
-                            id: Date.now() + index,
-                            name: item.name,
-                            location: finalLocation,
-                            ai_description: aiDesc,
-                            note: "",               
-                            rating: 5,
-                            types: isDashboard ? ['premise'] : ['tourist_attraction'],
-                            reviews: [],
-                            isLocked: false // AI 生成的預設不鎖定
-                        });
+                        dayCount = Math.max(dayCount, data.days.length);
+                        for(let i = 1; i <= dayCount; i++) if(!itineraryData[i]) itineraryData[i] = [];
+                        currentDay = 1; renderDayTabs(); updateUI(); refreshMarkersOnly();
                     }
+                    
+                    // 💡 手術刀：讓黃色導遊提醒框獨立顯示
+                    document.getElementById('ai-summary-container').classList.remove('hidden');
+                    document.getElementById('ai-itinerary-summary').innerHTML = `
+                        <div class="p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl shadow-sm animate-bounce-short">
+                            <div class="flex items-center gap-2 mb-2 text-amber-800 font-black"><i class="bi bi-chat-heart-fill"></i> AI 導遊貼心提醒：</div>
+                            <div class="text-[13px] text-amber-900 leading-relaxed font-bold">${data.ai_message}</div>
+                        </div>`;
+                    
+                    // 清空下方的藍色時間與地圖導航框，準備迎接新的計算
+                    document.getElementById('ai-suggestion-box').classList.add('hidden');
+                    document.getElementById('ai-map-instruction-content').innerHTML = '';
+                    document.getElementById('ai-distance-suggestion').innerHTML = '';
+                    document.getElementById('ai-time-suggestion').innerHTML = '';
 
-                    itineraryData[currentDay] = newPoints;
-                    
-                    updateUI(); 
-                    refreshMarkersOnly(); 
-                    
-                    document.getElementById('ai-suggestion-box').classList.remove('hidden');
-                    document.getElementById('ai-suggestion-text').innerHTML = `<p class="italic text-indigo-700">「${data.ai_message}」</p>`;
-                    
-                    alert("✨ AI 已為您產生專屬行程！");
+                    alert("✨ AI 已完成停車與備案規劃！");
                 } else {
                     alert("❌ AI 規劃失敗：" + (data.message || "請檢查 API 設定"));
                 }

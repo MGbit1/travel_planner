@@ -18,7 +18,7 @@ class MapController extends Controller
     public function store(Request $request) {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255', 
+            'address' => 'nullable|string|max:255',
             'latitude' => 'required|numeric',
             'longitude' => 'required|numeric',
         ]);
@@ -37,9 +37,9 @@ class MapController extends Controller
     {
         $executed = RateLimiter::attempt(
             'ai-plan-unique-limit',
-            1, 
+            1,
             function() { return true; },
-            60 
+            60
         );
 
         if (!$executed) {
@@ -61,17 +61,13 @@ class MapController extends Controller
                   "[Order: 景點名稱1, 景點名稱2, ...]";
 
         try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
+            // 💡 修正 1：改用 v1 路徑與穩定的 1.5-flash 模型
+            $url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}";
 
-            // 💡 手術：加入 CURL_IPRESOLVE_V4 避免 DNS 解析卡死
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->withoutVerifying() 
-                ->timeout(120) // 延長超時時間
-                ->withOptions([
-                    'curl' => [
-                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4 // 強制使用 IPv4
-                    ]
-                ])
+                ->withoutVerifying()
+                ->timeout(120)
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
                 ->post($url, [
                     'contents' => [['parts' => [['text' => $prompt]]]]
                 ]);
@@ -92,18 +88,16 @@ class MapController extends Controller
         }
     }
 
-    // 🤖 智慧對話式生成行程功能 (具備記憶與全局視野版)
     public function generateAI(Request $request) {
         $userPrompt = $request->input('prompt');
-        $history = $request->input('history', []); 
-        $allItineraries = $request->input('all_itineraries', []); 
+        $history = $request->input('history', []);
+        $allItineraries = $request->input('all_itineraries', []);
         $apiKey = trim(env('GEMINI_API_KEY'));
-    
+
         if (empty($apiKey)) {
             return response()->json(['status' => 'error', 'message' => '系統找不到 API 金鑰，請確認 .env 設定！'], 500);
         }
 
-        // 整理跨天數小抄
         $itineraryContext = "【目前系統中其他天數的已規劃行程】：\n";
         $hasData = false;
         foreach ($allItineraries as $day => $points) {
@@ -114,35 +108,37 @@ class MapController extends Controller
             }
         }
         if (!$hasData) $itineraryContext .= "尚無資料。\n";
-       
-        // 系統規則
-        $systemRules = "你是一位專業旅遊規劃師。請根據使用者需求規劃順路行程。\n" .
+
+        $systemRules = "你是一位擁有「超強地理方向感」且「高情商貼心」的頂級旅遊規劃大師。\n" .
                        $itineraryContext . "\n" .
-                       "【⚠️ 重要規則】：\n" .
-                       "1. 若提及「出發地」或「住家」，【必須】設為第 1 站。\n" .
-                       "2. 【回程限制】：除非使用者明確說出「當天來回」、「來回」或「回家」等字眼，否則【絕對不要】擅自幫使用者安排回程。使用者說去哪，就排到哪裡為止。\n" .
-                       "3. 【跨天數複製大法】：若使用者說「我要 Day X 的行程」或「跟 Day X 一樣」，請務必直接看上方的【已規劃行程】小抄，並「完全複製」該天所有的景點名稱，再配合他要求的新條件(如改變交通工具或出發地)。\n" .
-                       "4. 若使用者說「照剛剛的行程」或有延續先前對話的語意，請讀取歷史紀錄中的路線並加上他要求的新條件(例如新起點)。\n" .
-                       "5. 【精準判斷導航意圖】：若使用者的語意只是單純的「從A地到B地」（例如：「我要從...到...」、「...去...」），而沒有提到「安排行程」、「玩」、「順遊」等字眼，請【絕對不要】擅加任何休息站或景點，請【只】輸出他提到的那 2 個地點。只有在明確要求旅遊規劃時才擴充到 3-6 個景點。\n" .
-                       "6. 【交通模式判斷】：請判斷使用者使用的交通工具，回傳對應的代碼（DRIVING=開車, TWO_WHEELER=機車/騎車, TRANSIT=大眾運輸, WALKING=步行, BICYCLING=單車）。若無提及則預設為 DRIVING。\n" .
-                       "7. 【預算與時間】：預估「從上一站到此地點的車程時間」及「建議停留時間」，並精準分配「建議花費上限」。\n" .
-                       "請嚴格以純 JSON 格式回覆，不要有任何 Markdown 標記，格式如下：\n" .
+                       "【⚠️ 核心強制規則（絕對遵守）】：\n" .
+                       "1. 【極致順路】：排出的景點順序必須是地理動線最短，絕不走回頭路。\n" .
+                       "2. 【交通與停車補貼】：若交通模式為 DRIVING 或 TWO_WHEELER，【必須】在各站 travel_time 自動額外增加 10-15 分鐘的停車緩衝時間，並在理由中簡述停車便利性（如：有專屬停車場或附近有收費站）。\n" .
+                       "3. 【出發地優先】：若提及「出發地」或「住家」，【必須】設為第 1 站。\n" .
+                       "4. 【回程限制】：除非使用者明確要求，否則【絕對不要】擅自安排回家行程。\n" .
+                       "5. 【精準導航意圖】：若需求只是「A地到B地」，請【只】輸出這 2 個地點。\n" .
+                       "6. 【交通模式】：正確回傳代碼（DRIVING, TWO_WHEELER, TRANSIT, WALKING, BICYCLING）。\n" .
+                       "7. 【溫馨預警與備案】：優先遵守使用者時間，若有妥協（如錯過夕陽、店家未開）須在 ai_message 提醒，並附上一個『雨天備案建議』。\n" .
+                       "8. 【多天數分群】：自動判斷需求天數，依照 Day 1, Day 2... 分類打包。\n" .
+                       "9. 【預算與免費標註】：cost_estimate 須具體（如：門票 $200、餐費 $400），免費則寫 $0。\n\n" .
+                       "請嚴格以純 JSON 格式回覆，不含 Markdown：\n" .
                        "{\n" .
-                       "  \"ai_message\": \"對行程的整體描述與預算總結\",\n" .
+                       "  \"ai_message\": \"行程總結、重要預警（含停車提醒）與雨天備案\",\n" .
                        "  \"travel_mode\": \"DRIVING\",\n" .
-                       "  \"suggestions\": [\n" .
+                       "  \"days\": [\n" .
                        "    {\n" .
-                       "      \"name\": \"地點名稱\", \n" .
-                       "      \"lat\": 緯度, \n" .
-                       "      \"lng\": 經度,\n" .
-                       "      \"travel_time\": \"從上一站到這裡的車程 (例如: 約30分鐘)\",\n" .
-                       "      \"stay_time\": \"建議停留多久 (例如: 1.5小時)\",\n" .
-                       "      \"cost_estimate\": \"建議花費 (例如: 約300元)\",\n" .
-                       "      \"reason\": \"推薦原因或消費建議\"\n" .
+                       "      \"day\": 1,\n" .
+                       "      \"suggestions\": [\n" .
+                       "        {\n" .
+                       "          \"name\": \"地點名稱\", \"lat\": 緯度, \"lng\": 經度, \n" .
+                       "          \"travel_time\": \"含停車緩衝的車程\", \"stay_time\": \"建議停留\", \n" .
+                       "          \"cost_estimate\": \"預估花費\", \"reason\": \"推薦理由（含停車建議）\"\n" .
+                       "        }\n" .
+                       "      ]\n" .
                        "    }\n" .
                        "  ]\n" .
                        "}";
-    
+
         $contents = [];
         foreach ($history as $msg) {
             $contents[] = [
@@ -155,44 +151,43 @@ class MapController extends Controller
             'role' => 'user',
             'parts' => [['text' => "使用者最新需求：「{$userPrompt}」\n\n【⚠️ 系統強制規則（請務必遵守）】：\n{$systemRules}"]]
         ];
-    
-        try {
+
+       try {
+            // 💡 解決 404：改用 v1beta 路徑，因為 Preview 模型只在這個路徑下
+            // 💡 解決 429：改用 Flash 系列，額度比 Pro 高很多
             $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
     
-            // 💡 手術核心：延長為 120 秒，且強制使用 IPv4，避開 DNS 黑洞
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->withoutVerifying()
-                ->timeout(120) // 給予 AI 更充足的思考時間
-                ->withOptions([
-                    'curl' => [
-                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4 // 終極殺招：強制走 IPv4
-                    ]
-                ])
-                ->post($url, [
-                    'contents' => $contents
-                ]);
+                ->timeout(120) 
+                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                ->post($url, ['contents' => $contents]);
     
-            if ($response->successful()) {
-                $resData = $response->json();
-                $rawText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                
-                $cleanJson = preg_replace('/^```json\s*|```\s*$/', '', trim($rawText));
-                $result = json_decode($cleanJson, true);
-    
+            if (!$response->successful()) {
+                // 這行能幫您抓出 Google 真正的抱怨（是 404 還是 429）
                 return response()->json([
-                    'status' => 'success',
-                    'ai_message' => $result['ai_message'] ?? '這是為您專屬規劃的行程',
-                    'travel_mode' => $result['travel_mode'] ?? 'DRIVING',
-                    'suggestions' => $result['suggestions'] ?? []
-                ]);
+                    'status' => 'error', 
+                    'message' => '【Google 拒絕連線】：' . $response->body()
+                ], $response->status());
             }
             
-            $errorData = $response->json();
-            $googleError = $errorData['error']['message'] ?? '未知錯誤';
-            return response()->json(['status' => 'error', 'message' => 'Google API 報錯：' . $googleError], 500);
+            $resData = $response->json();
+            $rawText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            $cleanJson = preg_replace('/^```json\s*|```\s*$/', '', trim($rawText));
+            $result = json_decode($cleanJson, true);
+
+            return response()->json([
+                'status' => 'success',
+                'ai_message' => $result['ai_message'] ?? '規劃完成！',
+                'travel_mode' => $result['travel_mode'] ?? 'DRIVING',
+                'days' => $result['days'] ?? [] 
+            ]);
 
         } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => '伺服器連線異常：' . $e->getMessage()], 500);
+            return response()->json([
+                'status' => 'error', 
+                'message' => '【本機系統崩潰】：' . $e->getMessage()
+            ], 500);
+        }
         }
     }
-}
