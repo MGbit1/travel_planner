@@ -45,4 +45,22 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // 使用者發布的貼文
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    // 使用者的留言
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    // 使用者按過的讚
+    public function likedPosts()
+    {
+        return $this->belongsToMany(Post::class, 'post_likes')->withTimestamps();
+    }
 }
