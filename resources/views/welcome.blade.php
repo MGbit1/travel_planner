@@ -62,6 +62,12 @@
                 <div class="flex items-center gap-3">
                     @if (Route::has('login'))
                         @auth
+
+                            <a href="{{ route('feed.index') }}" class="text-[12px] font-bold text-blue-100 hover:text-white transition flex items-center gap-1 mr-3 border-r border-blue-400/50 pr-3">
+                                <span>🌍</span> 社群動態
+                            </a>
+                            
+
                             <div class="flex flex-col items-end">
                                 <a href="{{ route('dashboard') }}" class="text-[11px] text-blue-100 font-bold hover:text-white transition flex items-center gap-1">
                                     <span>⚙️</span> 控制台

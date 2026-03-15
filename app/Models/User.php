@@ -63,4 +63,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Post::class, 'post_likes')->withTimestamps();
     }
+    // 使用者的行程
+    public function trips()
+    {
+        return $this->hasMany(Trip::class);
+    }
 }
