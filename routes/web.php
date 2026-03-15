@@ -4,6 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MapController; 
 use App\Http\Controllers\TripController; 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\RankingController;
 
 // 💡 修改這段：如果網址有 trip_id，就把對應的行程撈出來傳給首頁
 Route::get('/', function () {
@@ -37,5 +39,27 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
+
+// 💡 動態牆與排行榜 (公開瀏覽)
+Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
+Route::get('/posts/{post}', [FeedController::class, 'show'])->name('feed.show');
+Route::get('/ranking', [RankingController::class, 'index'])->name('ranking.index');
+
+// 💡 需要登入才能操作的功能 (發文、留言、按讚)
+Route::middleware('auth')->group(function () {
+    // 發文
+    Route::post('/posts', [FeedController::class, 'store'])->name('feed.store');
+    // 刪除貼文 (限作者)
+    Route::delete('/posts/{post}', [FeedController::class, 'destroy'])->name('feed.destroy');
+    
+    // 留言
+    Route::post('/posts/{post}/comments', [FeedController::class, 'storeComment'])->name('comments.store');
+    // 刪除留言 (限作者)
+    Route::delete('/comments/{comment}', [FeedController::class, 'destroyComment'])->name('comments.destroy');
+    
+    // 按讚/取消按讚 (API)
+    Route::post('/posts/{post}/like', [FeedController::class, 'toggleLike'])->name('posts.like');
+});
+
 
 require __DIR__.'/auth.php';
