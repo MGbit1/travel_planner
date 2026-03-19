@@ -925,7 +925,8 @@
                         prompt: promptValue, 
                         mode: currentMode,
                         history: aiChatHistory[currentDay],
-                        all_itineraries: itineraryData 
+                        all_itineraries: itineraryData,
+                        current_day: currentDay // 💡 告訴後端我現在正在第幾天
                     })
                 });
 
@@ -975,9 +976,15 @@
                             }
                             itineraryData[dayNum] = newPoints;
                         }
-                        dayCount = Math.max(dayCount, data.days.length);
+                        // 💡 修正最大天數計算，並移除強制跳回 Day 1 的 Bug
+                        dayCount = Math.max(dayCount, highestDay);
                         for(let i = 1; i <= dayCount; i++) if(!itineraryData[i]) itineraryData[i] = [];
-                        currentDay = 1; renderDayTabs(); updateUI(); refreshMarkersOnly();
+                        
+                        // 讓畫面停留在 AI 剛剛幫你規劃的那一天 (通常就是你的 currentDay)
+                        if (data.days.length > 0) {
+                            currentDay = parseInt(data.days[data.days.length - 1].day) || currentDay;
+                        }
+                        renderDayTabs(); updateUI(); refreshMarkersOnly();
                     }
                     
                     // 💡 手術刀：讓黃色導遊提醒框獨立顯示

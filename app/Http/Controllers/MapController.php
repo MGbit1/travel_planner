@@ -93,6 +93,9 @@ class MapController extends Controller
         $history = $request->input('history', []);
         $allItineraries = $request->input('all_itineraries', []);
         $apiKey = trim(env('GEMINI_API_KEY'));
+        
+        // 💡 手術刀新增：接收前端目前的所在天數
+        $currentDay = $request->input('current_day', 1);
 
         if (empty($apiKey)) {
             return response()->json(['status' => 'error', 'message' => '系統找不到 API 金鑰，請確認 .env 設定！'], 500);
@@ -119,8 +122,9 @@ class MapController extends Controller
                        "5. 【精準導航意圖】：若需求只是「A地到B地」，請【只】輸出這 2 個地點。\n" .
                        "6. 【交通模式】：正確回傳代碼（DRIVING, TWO_WHEELER, TRANSIT, WALKING, BICYCLING）。\n" .
                        "7. 【溫馨預警與備案】：優先遵守使用者時間，若有妥協（如錯過夕陽、店家未開）須在 ai_message 提醒，並附上一個『雨天備案建議』。\n" .
-                       "8. 【多天數分群】：自動判斷需求天數，依照 Day 1, Day 2... 分類打包。\n" .
-                       "9. 【預算與免費標註】：cost_estimate 須具體（如：門票 $200、餐費 $400），免費則寫 $0。\n\n" .
+                       "8. 【跨天與指定天數操作】：若使用者「明確指定」要操作其他天數（例如說：「第二天要跟第一天一樣」、「幫我新增第三天」），請務必在 JSON 中輸出對應的天數（例如 `\"day\": 2`），系統才能正確分配。\n" .
+                       "9. 【預算與免費標註】：cost_estimate 須具體（如：門票 $200、餐費 $400），免費則寫 $0。\n" .
+                       "10. 【預設當前視角】：使用者目前正停留在「Day {$currentDay}」。只要使用者【沒有明確提到其他天數】，他所有的指令（包含「給我第一天行程」、「新增景點」）都是想在當前的「Day {$currentDay}」進行操作。請將結果放在「Day {$currentDay}」回傳，切勿擅自存到別天。\n\n" .
                        "請嚴格以純 JSON 格式回覆，不含 Markdown：\n" .
                        "{\n" .
                        "  \"ai_message\": \"行程總結、重要預警（含停車提醒）與雨天備案\",\n" .
