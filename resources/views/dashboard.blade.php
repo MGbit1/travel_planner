@@ -15,10 +15,15 @@
             @endif
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl p-6 border border-slate-100">
-                <h3 class="text-xl font-extrabold mb-6 flex items-center gap-2 text-slate-800">
-                    <i class="bi bi-folder-fill text-indigo-600"></i> 我儲存的行程
-                </h3>
                 
+                <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                    <h3 class="text-xl font-extrabold flex items-center gap-2 text-slate-800">
+                        <i class="bi bi-folder-fill text-indigo-600"></i> 我儲存的行程
+                    </h3>
+                    <a href="/?new=1" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                        <i class="bi bi-plus-lg text-lg leading-none"></i> 創建新行程
+                    </a>
+                </div>
                 @if(auth()->user()->trips && auth()->user()->trips->count() > 0)
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         @foreach(auth()->user()->trips as $trip)

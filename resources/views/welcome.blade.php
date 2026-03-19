@@ -185,6 +185,8 @@
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
         const loadedTripJson = {!! json_encode($loadedTrip ? $loadedTrip->itinerary_data : null) !!};
         const loadedTripTitle = {!! json_encode($loadedTrip ? $loadedTrip->title : null) !!};
+        // 💡 手術刀 1：接收後端傳來的行程專屬記憶
+        const loadedTripChatHistory = {!! json_encode($loadedTrip ? $loadedTrip->chat_history : null) !!};
 
         let map, service, geocoder, directionsService, trafficLayer;
         let itineraryData = { 1: [] };
@@ -192,8 +194,27 @@
         let dayCount = 1;
         
         let aiChatHistory = {}; 
+        if (loadedTripChatHistory) {
+            aiChatHistory = loadedTripChatHistory; // 從控制台載入的專屬記憶
+        } else {
+            const localMemory = localStorage.getItem('trip_ai_memory');
+            if (localMemory) {
+                try { aiChatHistory = JSON.parse(localMemory); } catch (e) { aiChatHistory = {}; }
+            }
+        }
+
         let searchDrafts = {}; 
         let aiPromptDrafts = {};
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('new') === '1') {
+            localStorage.removeItem('trip_ai_memory');
+            localStorage.removeItem('trip_itinerary_memory');
+            aiChatHistory = {}; // 清空變數
+            
+            // 偷偷把網址列的 ?new=1 擦掉，這樣如果不小心按 F5 才不會又被清空一次
+            window.history.replaceState({}, document.title, "/");
+        }
 
         let markers = [], routeLines = [], routeLabels = [];
         let currentMode = 'DRIVING', visibleLegs = new Set(), selectedRoutesMap = {}; 
@@ -225,6 +246,7 @@
             if (loadedTripJson) {
                 restoreLoadedTrip();
             } else {
+                restoreLocalDraft();
                 renderDayTabs(); 
                 updateUI(); 
             }
@@ -274,6 +296,40 @@
             }, 100);
         }
 
+        function restoreLocalDraft() {
+            const localItinerary = localStorage.getItem('trip_itinerary_memory');
+            if (localItinerary) {
+                try {
+                    let parsed = JSON.parse(localItinerary);
+                    let maxDay = 1;
+                    let bounds = new google.maps.LatLngBounds();
+                    let hasPoints = false;
+
+                    for (let dayStr in parsed) {
+                        let dayNum = parseInt(dayStr);
+                        if (dayNum > maxDay) maxDay = dayNum;
+                        
+                        itineraryData[dayNum] = parsed[dayStr].map(point => {
+                            // 將文字格式的座標轉回 Google Maps 物件
+                            let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
+                            bounds.extend(realLocation);
+                            hasPoints = true;
+                            return { ...point, location: realLocation };
+                        });
+                    }
+                    dayCount = maxDay;
+                    
+                    if (hasPoints) {
+                        setTimeout(() => {
+                            map.fitBounds(bounds);
+                            refreshMarkersOnly();
+                            if (itineraryData[currentDay] && itineraryData[currentDay].length >= 2) calculateRoute();
+                        }, 300);
+                    }
+                } catch(e) { console.error("草稿還原失敗", e); }
+            }
+        }
+
         async function saveFullTrip() {
             if (!isLoggedIn) {
                 alert("🔒 請先「登入或註冊」，才能將專屬行程存入您的帳號喔！");
@@ -296,7 +352,8 @@
 
             const payload = {
                 title: title,
-                itinerary_data: itineraryData 
+                itinerary_data: itineraryData,
+                chat_history: aiChatHistory // 💡 手術刀 3：把對話記憶一起打包送給後端
             };
 
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -314,6 +371,8 @@
                 const result = await response.json();
                 
                 if (response.ok && result.status === 'success') {
+                    localStorage.removeItem('trip_ai_memory'); // 💡 存檔成功後，清空瀏覽器暫存
+                    localStorage.removeItem('trip_itinerary_memory');
                     alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！");
                 } else {
                     alert("❌ 儲存失敗，請檢查後端錯誤：\n" + (result.message || JSON.stringify(result)));
@@ -852,6 +911,7 @@
         }
 
         function updateUI() {
+            localStorage.setItem('trip_itinerary_memory', JSON.stringify(itineraryData));
             const currentItinerary = itineraryData[currentDay] || []; 
             const list = document.getElementById('itinerary-list'); 
             document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; 
@@ -936,6 +996,8 @@
                     
                     aiChatHistory[currentDay].push({ role: 'user', text: promptValue });
                     aiChatHistory[currentDay].push({ role: 'model', text: `行程規劃完畢。總結：${data.ai_message}` });
+
+                    localStorage.setItem('trip_ai_memory', JSON.stringify(aiChatHistory));
 
                     if (data.travel_mode) {
                         currentMode = data.travel_mode;
