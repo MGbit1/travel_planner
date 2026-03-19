@@ -17,12 +17,14 @@ class TripController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'itinerary_data' => 'required|array', 
+            'chat_history' => 'nullable|array', // 💡 手術刀第一刀：允許接收前端傳來的聊天記憶
         ]);
 
         $trip = Trip::create([
             'user_id' => Auth::id(),
             'title' => $validated['title'],
             'itinerary_data' => $validated['itinerary_data'],
+            'chat_history' => $validated['chat_history'] ?? null, // 💡 手術刀第二刀：把記憶存進資料庫
         ]);
 
         return response()->json([
