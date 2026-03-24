@@ -183,6 +183,21 @@
 
     <script>
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
+        
+        // 💡 抓蟲手術：實作「切換帳號/登入登出」自動清空草稿的機制
+        const currentUserId = "{{ Auth::check() ? Auth::id() : 'guest' }}"; // 現在是誰？
+        const lastUserId = sessionStorage.getItem('last_user_state');         // 剛剛是誰？
+
+        // 如果發現狀態改變了（例如從 guest 變成登入，或從登入變成 guest）
+        if (lastUserId !== null && lastUserId !== currentUserId) {
+            sessionStorage.removeItem('trip_ai_memory');
+            sessionStorage.removeItem('trip_itinerary_memory');
+            console.log('🔄 登入狀態改變，已自動清空所有地圖草稿');
+        }
+        
+        // 更新狀態紀錄，等下次重新整理時用來比對
+        sessionStorage.setItem('last_user_state', currentUserId);
+
         const loadedTripJson = {!! json_encode($loadedTrip ? $loadedTrip->itinerary_data : null) !!};
         const loadedTripTitle = {!! json_encode($loadedTrip ? $loadedTrip->title : null) !!};
         // 💡 手術刀 1：接收後端傳來的行程專屬記憶
@@ -197,7 +212,7 @@
         if (loadedTripChatHistory) {
             aiChatHistory = loadedTripChatHistory; // 從控制台載入的專屬記憶
         } else {
-            const localMemory = localStorage.getItem('trip_ai_memory');
+            const localMemory = sessionStorage.getItem('trip_ai_memory');
             if (localMemory) {
                 try { aiChatHistory = JSON.parse(localMemory); } catch (e) { aiChatHistory = {}; }
             }
@@ -208,8 +223,8 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('new') === '1') {
-            localStorage.removeItem('trip_ai_memory');
-            localStorage.removeItem('trip_itinerary_memory');
+            sessionStorage.removeItem('trip_ai_memory');
+            sessionStorage.removeItem('trip_itinerary_memory');
             aiChatHistory = {}; // 清空變數
             
             // 偷偷把網址列的 ?new=1 擦掉，這樣如果不小心按 F5 才不會又被清空一次
@@ -297,7 +312,7 @@
         }
 
         function restoreLocalDraft() {
-            const localItinerary = localStorage.getItem('trip_itinerary_memory');
+            const localItinerary = sessionStorage.getItem('trip_itinerary_memory');
             if (localItinerary) {
                 try {
                     let parsed = JSON.parse(localItinerary);
@@ -371,8 +386,8 @@
                 const result = await response.json();
                 
                 if (response.ok && result.status === 'success') {
-                    localStorage.removeItem('trip_ai_memory'); // 💡 存檔成功後，清空瀏覽器暫存
-                    localStorage.removeItem('trip_itinerary_memory');
+                    sessionStorage.removeItem('trip_ai_memory'); // 💡 存檔成功後，清空瀏覽器暫存
+                    sessionStorage.removeItem('trip_itinerary_memory');
                     alert("✅ 存檔成功！行程已安全存入您的專屬帳號資料庫！");
                 } else {
                     alert("❌ 儲存失敗，請檢查後端錯誤：\n" + (result.message || JSON.stringify(result)));
@@ -911,7 +926,7 @@
         }
 
         function updateUI() {
-            localStorage.setItem('trip_itinerary_memory', JSON.stringify(itineraryData));
+            sessionStorage.setItem('trip_itinerary_memory', JSON.stringify(itineraryData));
             const currentItinerary = itineraryData[currentDay] || []; 
             const list = document.getElementById('itinerary-list'); 
             document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; 
@@ -997,7 +1012,7 @@
                     aiChatHistory[currentDay].push({ role: 'user', text: promptValue });
                     aiChatHistory[currentDay].push({ role: 'model', text: `行程規劃完畢。總結：${data.ai_message}` });
 
-                    localStorage.setItem('trip_ai_memory', JSON.stringify(aiChatHistory));
+                    sessionStorage.setItem('trip_ai_memory', JSON.stringify(aiChatHistory));
 
                     if (data.travel_mode) {
                         currentMode = data.travel_mode;
