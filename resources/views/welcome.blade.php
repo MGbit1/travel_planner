@@ -554,7 +554,21 @@
             updateRouteToggleUI(); 
             for (let i = 0; i < currentItinerary.length - 1; i++) {
                 const results = await requestRouteByMode(currentItinerary[i].location, currentItinerary[i+1].location, currentMode);
-                if (results && results.routes) { selectedRoutesMap[i].result = results; drawLeg(results.routes, i); } else { document.getElementById('ai-map-instruction-content').innerHTML = `<span class="text-red-500 font-bold">❌ 第 ${i+1} 段計算失敗。</span>`; return; }
+                if (results && results.routes) { selectedRoutesMap[i].result = results; drawLeg(results.routes, i); } else { 
+                    document.getElementById('ai-map-instruction-content').innerHTML = `
+                        <div class="p-3 bg-red-50 rounded-xl border border-red-100 mb-2">
+                            <span class="text-red-600 font-bold text-[13px] flex items-center gap-1">
+                                ❌ 第 ${i+1} 段路線計算失敗
+                            </span>
+                            <div class="text-[11px] text-red-500 mt-2 space-y-1">
+                                <p><strong>常見原因：</strong></p>
+                                <p>1. 該國家/地區不支援 Google 導航 (如：韓國受法規限制)。</p>
+                                <p>2. 兩地之間無法透過該交通方式到達 (如：跨海、無道路相連)。</p>
+                                <p>3. 該地區缺乏大眾運輸資料。</p>
+                            </div>
+                        </div>`; 
+                    return;
+                }
             }
             renderAISuggestions(); updateRouteVisibility(); 
             checkOptimalRouteSuggestion(); 
