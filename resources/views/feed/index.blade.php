@@ -16,6 +16,7 @@
             </a>
             <div class="flex items-center gap-5">
                 <a href="/feed" class="font-bold border-b-2 border-white pb-1">🌍 社群動態</a>
+                <a href="/ranking" class="text-white hover:text-blue-200 transition font-bold">🏆 景點排行</a>
                 <a href="/" class="text-blue-200 hover:text-white transition font-bold">在地圖規劃</a>
                 @auth
                     <a href="{{ route('dashboard') }}" class="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-sm font-black shadow-sm hover:bg-blue-50 transition">我的控制台</a>
