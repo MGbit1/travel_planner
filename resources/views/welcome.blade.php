@@ -55,7 +55,7 @@
             
             <div class="p-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center shadow-md relative z-30">
                 <a href="/" class="hover:scale-105 transition-transform block">
-                    <h1 class="text-xl font-bold flex items-center gap-2"><span>🚀</span> AI 旅程大師</h1>
+                    <h1 class="text-xl font-bold flex items-center gap-2"><span>🚀</span> AI趣玩 </h1>
                     <p class="text-blue-100 text-[10px] mt-0.5">Multi-Day Smart Planning</p>
                 </a>
                 

@@ -13,6 +13,19 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="text-blue-100 hover:text-white hover:border-white focus:text-white focus:border-white font-bold text-[15px]">
                         {{ __('控制台') }}
                     </x-nav-link>
+
+                    <x-nav-link href="/feed" :active="request()->is('feed*')">
+                        {{ __('🌍 社群動態') }}
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('ranking.index')" :active="request()->routeIs('ranking.index')">
+                        {{ __('🏆 景點排行') }}
+                    </x-nav-link>
+                    
+                    <x-nav-link href="/">
+                        {{ __('🗺️ 在地圖規劃') }}
+                    </x-nav-link>
+
                 </div>
             </div>
 
@@ -64,6 +77,19 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" class="text-white hover:bg-indigo-600">
                 {{ __('控制台') }}
             </x-responsive-nav-link>
+
+            <x-responsive-nav-link href="/feed" :active="request()->is('feed*')">
+                {{ __('🌍 社群動態') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('ranking.index')" :active="request()->routeIs('ranking.index')">
+                {{ __('🏆 景點排行') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link href="/">
+                {{ __('🗺️ 在地圖規劃') }}
+            </x-responsive-nav-link>
+            
         </div>
         <div class="pt-4 pb-1 border-t border-indigo-500">
             <div class="px-4">
