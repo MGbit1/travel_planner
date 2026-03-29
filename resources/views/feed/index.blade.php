@@ -22,7 +22,7 @@
             @if($posts && $posts->count() > 0)
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     @foreach($posts as $post)
-                        <a href="/?trip_id={{ $post->trip_id }}" class="block group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative">
+                        <a href="{{ route('feed.show', $post->id) }}" class="block group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 flex flex-col h-full relative">
                             
                             <div class="relative h-48 bg-slate-50 border-b border-slate-100 overflow-hidden">
                                 @if($post->image_url)
