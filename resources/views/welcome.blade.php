@@ -54,6 +54,16 @@
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
+    <div id="global-loader" class="fixed inset-0 z-[999] bg-slate-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-16 h-16 relative flex items-center justify-center mb-5">
+            <div class="absolute inset-0 rounded-full border-t-2 border-indigo-600 animate-spin"></div>
+            <div class="absolute inset-2 rounded-full border-t-2 border-blue-400 animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+            <i class="bi bi-compass text-2xl text-slate-800"></i>
+        </div>
+        <h2 class="text-xl font-extrabold text-slate-800 tracking-tight mb-2">TripFlow<span class="text-indigo-600">.</span></h2>
+        <p class="text-[12px] text-slate-500 font-medium animate-pulse">正在為您準備專屬地圖與行程資料...</p>
+    </div>
+
     <div class="flex h-screen w-full overflow-hidden">
         <div class="w-[360px] md:w-[420px] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
             
@@ -262,6 +272,15 @@
                 renderDayTabs(); 
                 updateUI(); 
             }
+
+            // 💡 新增這段：當地圖初始化完畢後，延遲 0.8 秒讓 Google API 畫完路線，然後優雅地淡出 Loading 畫面
+            setTimeout(() => {
+                const loader = document.getElementById('global-loader');
+                if (loader) {
+                    loader.classList.add('opacity-0');
+                    setTimeout(() => loader.remove(), 500); // 等待淡出動畫結束後徹底移除
+                }
+            }, 800);
         }
 
         function restoreLoadedTrip() {
