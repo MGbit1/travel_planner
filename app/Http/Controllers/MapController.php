@@ -61,7 +61,6 @@ class MapController extends Controller
                   "[Order: 景點名稱1, 景點名稱2, ...]";
 
         try {
-            // 💡 修正 1：改用 v1 路徑與穩定的 1.5-flash 模型
             $url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}";
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
@@ -94,7 +93,6 @@ class MapController extends Controller
         $allItineraries = $request->input('all_itineraries', []);
         $apiKey = trim(env('GEMINI_API_KEY'));
         
-        // 💡 手術刀新增：接收前端目前的所在天數
         $currentDay = $request->input('current_day', 1);
 
         if (empty($apiKey)) {
@@ -112,6 +110,7 @@ class MapController extends Controller
         }
         if (!$hasData) $itineraryContext .= "尚無資料。\n";
 
+        // 💡 這裡就是我們把「緊箍咒」加進去的地方！（第 11 點）
         $systemRules = "你是一位擁有「超強地理方向感」且「高情商貼心」的頂級旅遊規劃大師。\n" .
                        $itineraryContext . "\n" .
                        "【⚠️ 核心強制規則（絕對遵守）】：\n" .
@@ -124,24 +123,28 @@ class MapController extends Controller
                        "7. 【溫馨預警與備案】：優先遵守使用者時間，若有妥協（如錯過夕陽、店家未開）須在 ai_message 提醒，並附上一個『雨天備案建議』。\n" .
                        "8. 【跨天與指定天數操作】：若使用者「明確指定」要操作其他天數（例如說：「第二天要跟第一天一樣」、「幫我新增第三天」），請務必在 JSON 中輸出對應的天數（例如 `\"day\": 2`），系統才能正確分配。\n" .
                        "9. 【預算與免費標註】：cost_estimate 須具體（如：門票 $200、餐費 $400），免費則寫 $0。\n" .
-                       "10. 【預設當前視角】：使用者目前正停留在「Day {$currentDay}」。只要使用者【沒有明確提到其他天數】，他所有的指令（包含「給我第一天行程」、「新增景點」）都是想在當前的「Day {$currentDay}」進行操作。請將結果放在「Day {$currentDay}」回傳，切勿擅自存到別天。\n\n" .
-                       "請嚴格以純 JSON 格式回覆，不含 Markdown：\n" .
-                       "{\n" .
-                       "  \"ai_message\": \"行程總結、重要預警（含停車提醒）與雨天備案\",\n" .
-                       "  \"travel_mode\": \"DRIVING\",\n" .
-                       "  \"days\": [\n" .
-                       "    {\n" .
-                       "      \"day\": 1,\n" .
-                       "      \"suggestions\": [\n" .
-                       "        {\n" .
-                       "          \"name\": \"地點名稱\", \"lat\": 緯度, \"lng\": 經度, \n" .
-                       "          \"travel_time\": \"含停車緩衝的車程\", \"stay_time\": \"建議停留\", \n" .
-                       "          \"cost_estimate\": \"預估花費\", \"reason\": \"推薦理由（含停車建議）\"\n" .
-                       "        }\n" .
-                       "      ]\n" .
-                       "    }\n" .
-                       "  ]\n" .
-                       "}";
+                       "10. 【預設當前視角】：使用者目前正停留在「Day {$currentDay}」。只要使用者【沒有明確提到其他天數】，他所有的指令（包含「給我第一天行程」、「新增景點」）都是想在當前的「Day {$currentDay}」進行操作。請將結果放在「Day {$currentDay}」回傳，切勿擅自存到別天。\n" .
+                       "11. 【絕對實體地點與停車模式】：如果使用者要求尋找住宿或餐廳，請給出具體店名。景點名稱保持乾淨。此外，請【必須】分析該景點的停車情境，並在 suggestions JSON 中增加一個欄位 `\"parking_mode\": \"...\"`：\n" .
+                        "    - 若為飯店、大型百貨、有自備大型停車場的景點，填寫 `\"INTERNAL\"`。理由需提到自備停車場。\n" .
+                        "    - 若為夜市、老街、戶外公園、台中港等需在外找位置的景點，填寫 `\"EXTERNAL\"`。理由需提醒附近車位狀況。\n\n" .
+                        "請嚴格以純 JSON 格式回覆：\n" .
+                        "{\n" .
+                        "  \"ai_message\": \"...\",\n" .
+                        "  \"travel_mode\": \"...\",\n" .
+                        "  \"days\": [\n" .
+                        "    {\n" .
+                        "      \"day\": 1,\n" .
+                        "      \"suggestions\": [\n" .
+                        "        {\n" .
+                        "          \"name\": \"...\", \"lat\": ..., \"lng\": ..., \n" .
+                        "          \"travel_time\": \"...\", \"stay_time\": \"...\", \n" .
+                        "          \"cost_estimate\": \"...\", \"reason\": \"...\",\n" .
+                        "          \"parking_mode\": \"INTERNAL 或 EXTERNAL\" // 💡 新增這個欄位\n" .
+                        "        }\n" .
+                        "      ]\n" .
+                        "    }\n" .
+                        "  ]\n" .
+                        "}";
 
         $contents = [];
         foreach ($history as $msg) {
@@ -157,8 +160,6 @@ class MapController extends Controller
         ];
 
        try {
-            // 💡 解決 404：改用 v1beta 路徑，因為 Preview 模型只在這個路徑下
-            // 💡 解決 429：改用 Flash 系列，額度比 Pro 高很多
             $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
     
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
@@ -168,7 +169,6 @@ class MapController extends Controller
                 ->post($url, ['contents' => $contents]);
     
             if (!$response->successful()) {
-                // 這行能幫您抓出 Google 真正的抱怨（是 404 還是 429）
                 return response()->json([
                     'status' => 'error', 
                     'message' => '【Google 拒絕連線】：' . $response->body()
@@ -193,5 +193,5 @@ class MapController extends Controller
                 'message' => '【本機系統崩潰】：' . $e->getMessage()
             ], 500);
         }
-        }
     }
+}

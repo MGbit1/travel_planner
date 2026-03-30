@@ -24,7 +24,7 @@
         .move-btn { opacity: 0.4; transition: opacity 0.2s; }
         .group:hover .move-btn { opacity: 1; }
         
-        /* 💡 更新：低調質感的按鈕與標籤風格 */
+        /* 低調質感的按鈕與標籤風格 */
         .mode-btn { transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
         .mode-btn.active { background-color: #1e293b !important; color: white !important; font-weight: 700; border: 1px solid #0f172a; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         
@@ -243,7 +243,6 @@
         let tempOptimizedItinerary = null; 
         let currentAnalysisId = 0; 
 
-        // 降低路線顏色的飽和度，更符合質感風格
         const colorPalette = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f43f5e"];
 
         function initMap() {
@@ -273,12 +272,11 @@
                 updateUI(); 
             }
 
-            // 💡 新增這段：當地圖初始化完畢後，延遲 0.8 秒讓 Google API 畫完路線，然後優雅地淡出 Loading 畫面
             setTimeout(() => {
                 const loader = document.getElementById('global-loader');
                 if (loader) {
                     loader.classList.add('opacity-0');
-                    setTimeout(() => loader.remove(), 500); // 等待淡出動畫結束後徹底移除
+                    setTimeout(() => loader.remove(), 500); 
                 }
             }, 800);
         }
@@ -900,6 +898,9 @@
                 const isLockedClass = p.isLocked ? 'border-red-200 bg-red-50/20' : 'border-slate-200 bg-white';
                 const hasParkingNote = p.ai_description && (p.ai_description.includes('停車') || p.ai_description.includes('找車位'));
                 
+                // 💡 新增：判斷這個景點是不是「住宿 (lodging)」
+                const isLodging = p.types && p.types.includes('lodging');
+                
                 return `
                 <div class="${isLockedClass} border rounded-2xl p-4 shadow-sm group animate-in slide-in-from-left duration-200 relative">
                     ${p.isLocked ? `<div class="absolute -left-1.5 -top-1.5 bg-red-50 text-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-red-200 text-[10px] shadow-sm"><i class="bi bi-lock-fill"></i></div>` : ''}
@@ -908,7 +909,20 @@
                             <p class="text-[10px] text-slate-400 font-semibold tracking-widest mb-1 uppercase">Stop ${i+1}</p>
                             <div class="flex items-center gap-2">
                                 <p class="font-bold text-slate-800 text-[14px] truncate">${p.name}</p>
-                                <button onclick="toggleDetail(${i})" class="text-slate-400 hover:text-indigo-600 transition flex-shrink-0"><i class="bi bi-info-circle"></i></button>
+                                
+                                <button onclick="toggleDetail(${i})" class="text-slate-400 hover:text-indigo-600 transition flex-shrink-0" title="查看景點資訊">
+                                    <i class="bi bi-info-circle"></i>
+                                </button>
+                                
+                                <a href="https://www.google.com/maps/search/?api=1&query=${p.location.lat()},${p.location.lng()}" target="_blank" class="text-slate-400 hover:text-emerald-500 transition flex-shrink-0" title="開啟 Google 導航">
+                                    <i class="bi bi-cursor-fill"></i>
+                                </a>
+
+                                ${isLodging ? `
+                                <a href="https://www.agoda.com/zh-tw/search?text=${encodeURIComponent(p.name)}" target="_blank" class="text-slate-400 hover:text-sky-500 transition flex-shrink-0" title="一鍵搜出好房價 (Agoda)">
+                                    <i class="bi bi-building-check"></i>
+                                </a>
+                                ` : ''}
                             </div>
                             
                             ${p.ai_description ? `
@@ -917,7 +931,19 @@
                                 </div>
                             ` : ''}
 
-                            ${hasParkingNote ? `<div class="mt-1.5 flex items-center gap-1 text-slate-500 font-medium" style="font-size: 10px;"><i class="bi bi-p-circle"></i> 需預留找車位時間</div>` : ''}
+                            ${p.parking_mode === 'INTERNAL' ? `
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}" target="_blank" class="mt-2 flex items-center gap-1.5 text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded border border-emerald-100 transition hover:bg-emerald-100" style="font-size: 10px;">
+                                    <i class="bi bi-check-circle-fill"></i> ✅ 附設停車場 (直接導航)
+                                </a>
+                            ` : p.parking_mode === 'EXTERNAL' ? `
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-100 transition hover:bg-amber-100" style="font-size: 10px;">
+                                    <i class="bi bi-search"></i> 🔍 搜尋附近停車場
+                                </a>
+                            ` : hasParkingNote ? `
+                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-slate-500 font-medium" style="font-size: 10px;">
+                                    <i class="bi bi-p-circle"></i> 需自行在附近尋找停車位
+                                </a>
+                            ` : ''}
                             ${p.note ? `<p class="text-[11px] text-indigo-600 mt-2 flex items-center gap-1.5 font-medium bg-indigo-50/50 p-1.5 rounded"><i class="bi bi-card-text"></i> ${p.note}</p>` : ''}
                         </div>
                         
@@ -982,6 +1008,10 @@
                             for (let index = 0; index < dayObj.suggestions.length; index++) {
                                 let item = dayObj.suggestions[index];
                                 let isDashboard = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
+                                
+                                // 💡 新增：AI 住宿雷達！自動偵測名稱是否包含飯店關鍵字
+                                let isHotel = item.name.includes('飯店') || item.name.includes('酒店') || item.name.includes('旅館') || item.name.includes('民宿') || item.name.includes('商旅') || item.name.includes('行館') || item.name.includes('渡假村') || item.name.includes('Hotel') || item.name.includes('Resort');
+                                
                                 let finalLocation = new google.maps.LatLng(item.lat, item.lng);
                                 if (isDashboard) {
                                     await new Promise((resolve) => { geocoder.geocode({ address: item.name }, (results, status) => { if (status === 'OK' && results[0]) finalLocation = results[0].geometry.location; resolve(); }); });
@@ -994,9 +1024,23 @@
                                 
                                 let aiDesc = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
 
+                                // 💡 新增：動態賦予標籤，讓 isLodging 可以抓到
+                                let placeTypes = ['tourist_attraction']; // 預設為景點
+                                if (isDashboard) placeTypes = ['premise'];
+                                if (isHotel) placeTypes = ['lodging', 'tourist_attraction']; // 給予住宿標籤
+
                                 newPoints.push({
-                                    id: Date.now() + index + (dayNum * 1000), name: item.name, location: finalLocation, ai_description: aiDesc,
-                                    note: "", rating: 5, types: isDashboard ? ['premise'] : ['tourist_attraction'], reviews: [], isLocked: false
+                                    id: Date.now() + index + (dayNum * 1000), 
+                                    name: item.name, 
+                                    location: finalLocation, 
+                                    ai_description: aiDesc,
+                                    note: "", 
+                                    rating: 5, 
+                                    types: placeTypes, 
+                                    reviews: [], 
+                                    isLocked: false,
+                                    // 💡 關鍵修正：把 AI 傳過來的停車模式存進去！
+                                    parking_mode: item.parking_mode || null
                                 });
                             }
                             itineraryData[dayNum] = newPoints;
