@@ -64,9 +64,14 @@
         <p class="text-[12px] text-slate-500 font-medium animate-pulse">正在為您準備專屬地圖與行程資料...</p>
     </div>
 
-    <div class="flex h-screen w-full overflow-hidden">
-        <div class="w-[360px] md:w-[420px] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-r border-slate-200">
+    <div class="flex flex-col md:flex-row h-[100dvh] w-full overflow-hidden bg-slate-100">
+        
+        <div class="order-2 md:order-1 w-full h-[55%] md:h-full md:w-[380px] lg:w-[420px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-t md:border-t-0 md:border-r border-slate-200 rounded-t-[2rem] md:rounded-none relative">
             
+            <div class="md:hidden flex justify-center pt-3 pb-1 w-full shrink-0">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+            </div>
+
             <div class="px-6 py-4 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30">
                 <a href="/" class="block hover:opacity-80 transition">
                     <h1 class="text-xl font-extrabold tracking-tight text-slate-800">TripFlow<span class="text-indigo-600">.</span></h1>
@@ -183,17 +188,13 @@
                 </div>
 
             </div>
-        </div>
-
-        <div class="flex-1 relative bg-slate-100">
-            <div id="map"></div>
+        </div> <div class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
+            <div id="map" class="w-full h-full"></div>
             <button onclick="toggleTraffic()" class="absolute top-5 right-5 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
                 <i class="bi bi-stoplights"></i> 即時路況
             </button>
         </div>
-    </div>
-
-    <script>
+    </div> <script>
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
         
         const currentUserId = "{{ Auth::check() ? Auth::id() : 'guest' }}"; 
@@ -901,6 +902,9 @@
                 // 💡 新增：判斷這個景點是不是「住宿 (lodging)」
                 const isLodging = p.types && p.types.includes('lodging');
                 
+                // 💡 修改：改用標準的 Google Maps API 連結以防在編輯器中報錯
+                const mapsUrlBase = "https://www.google.com/maps/dir/?api=1&destination=";
+                
                 return `
                 <div class="${isLockedClass} border rounded-2xl p-4 shadow-sm group animate-in slide-in-from-left duration-200 relative">
                     ${p.isLocked ? `<div class="absolute -left-1.5 -top-1.5 bg-red-50 text-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-red-200 text-[10px] shadow-sm"><i class="bi bi-lock-fill"></i></div>` : ''}
@@ -914,7 +918,7 @@
                                     <i class="bi bi-info-circle"></i>
                                 </button>
                                 
-                                <a href="https://www.google.com/maps/search/?api=1&query=${p.location.lat()},${p.location.lng()}" target="_blank" class="text-slate-400 hover:text-emerald-500 transition flex-shrink-0" title="開啟 Google 導航">
+                                <a href="${mapsUrlBase}${p.location.lat()},${p.location.lng()}" target="_blank" class="text-slate-400 hover:text-emerald-500 transition flex-shrink-0" title="開啟 Google 導航">
                                     <i class="bi bi-cursor-fill"></i>
                                 </a>
 
@@ -932,15 +936,15 @@
                             ` : ''}
 
                             ${p.parking_mode === 'INTERNAL' ? `
-                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name)}" target="_blank" class="mt-2 flex items-center gap-1.5 text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded border border-emerald-100 transition hover:bg-emerald-100" style="font-size: 10px;">
+                                <a href="${mapsUrlBase}${encodeURIComponent(p.name)}" target="_blank" class="mt-2 flex items-center gap-1.5 text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded border border-emerald-100 transition hover:bg-emerald-100" style="font-size: 10px;">
                                     <i class="bi bi-check-circle-fill"></i> ✅ 附設停車場 (直接導航)
                                 </a>
                             ` : p.parking_mode === 'EXTERNAL' ? `
-                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-100 transition hover:bg-amber-100" style="font-size: 10px;">
+                                <a href="${mapsUrlBase}${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-amber-600 font-semibold bg-amber-50 px-2 py-1 rounded border border-amber-100 transition hover:bg-amber-100" style="font-size: 10px;">
                                     <i class="bi bi-search"></i> 🔍 搜尋附近停車場
                                 </a>
                             ` : hasParkingNote ? `
-                                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-slate-500 font-medium" style="font-size: 10px;">
+                                <a href="${mapsUrlBase}${encodeURIComponent(p.name + ' 停車場')}" target="_blank" class="mt-2 flex items-center gap-1.5 text-slate-500 font-medium" style="font-size: 10px;">
                                     <i class="bi bi-p-circle"></i> 需自行在附近尋找停車位
                                 </a>
                             ` : ''}
@@ -968,6 +972,9 @@
             const promptValue = document.getElementById('ai-chat-prompt').value;
             if (!promptValue) return alert("請輸入您的想法喔！");
 
+            // 💡 新增：偷偷在背後加上「系統強制緊箍咒」，逼 AI 給出具體實體
+            const enhancedPrompt = promptValue + "\n\n(系統強制指令：1. 如果使用者要求尋找住宿，請直接給出「具體且真實存在的飯店/旅館名稱」。2. 絕對不要給出「某某周邊」、「某某考察」、「尋找住宿」這種模糊的行程動作。3. 景點名稱請保持乾淨，不要在名稱後面加括號補充說明。)";
+
             const btn = document.getElementById('ai-gen-btn');
             const btnText = document.getElementById('ai-btn-text');
             const icon = document.getElementById('ai-btn-icon');
@@ -982,7 +989,7 @@
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                    body: JSON.stringify({ prompt: promptValue, mode: currentMode, history: aiChatHistory[currentDay], all_itineraries: itineraryData, current_day: currentDay })
+                    body: JSON.stringify({ prompt: enhancedPrompt, mode: currentMode, history: aiChatHistory[currentDay], all_itineraries: itineraryData, current_day: currentDay })
                 });
 
                 const data = await response.json();
