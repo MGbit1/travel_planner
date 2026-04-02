@@ -153,10 +153,16 @@
                 </div>
 
                 <div class="space-y-4 pt-2">
+                    
                     <div class="flex justify-between items-end border-b border-slate-200 pb-3">
-                        <h2 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-                            <span id="current-day-label">Day 1 行程</span>
-                        </h2>
+                        <div class="flex items-center gap-3">
+                            <h2 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
+                                <span id="current-day-label">Day 1 行程</span>
+                            </h2>
+                            <button onclick="startMultiStopNav()" id="multi-nav-btn" class="hidden bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm border border-emerald-100">
+                                <i class="bi bi-cursor-fill"></i> 一鍵導航
+                            </button>
+                        </div>
                         <span class="text-[11px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-md" id="point-count">0 個地點</span>
                     </div>
                     
@@ -188,13 +194,17 @@
                 </div>
 
             </div>
-        </div> <div class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
+        </div> 
+
+        <div class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
             <div id="map" class="w-full h-full"></div>
             <button onclick="toggleTraffic()" class="absolute top-5 right-5 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
                 <i class="bi bi-stoplights"></i> 即時路況
             </button>
         </div>
-    </div> <script>
+    </div> 
+
+    <script>
         const isLoggedIn = {{ Auth::check() ? 'true' : 'false' }};
         
         const currentUserId = "{{ Auth::check() ? Auth::id() : 'guest' }}"; 
@@ -280,6 +290,35 @@
                     setTimeout(() => loader.remove(), 500); 
                 }
             }, 800);
+        }
+
+        function startMultiStopNav() {
+            const currentItinerary = itineraryData[currentDay] || [];
+            if (currentItinerary.length < 2) {
+                alert("至少需要兩個地點才能開始導航喔！");
+                return;
+            }
+
+            const originStr = encodeURIComponent(currentItinerary[0].name);
+            const destStr = encodeURIComponent(currentItinerary[currentItinerary.length - 1].name);
+            
+            const baseUrl = "https:/" + "/www.google.com/maps/dir/?api=1";
+            let multiStopUrl = baseUrl + "&origin=" + originStr + "&destination=" + destStr;
+
+            if (currentItinerary.length > 2) {
+                const waypointNames = currentItinerary.slice(1, -1).map(p => encodeURIComponent(p.name));
+                multiStopUrl += "&waypoints=" + waypointNames.join('%7C'); 
+            }
+
+            let gmapMode = 'driving';
+            if (currentMode === 'WALKING') gmapMode = 'walking';
+            else if (currentMode === 'BICYCLING') gmapMode = 'bicycling';
+            else if (currentMode === 'TRANSIT') gmapMode = 'transit';
+            else if (currentMode === 'TWO_WHEELER') gmapMode = 'two-wheeler'; 
+
+            multiStopUrl += "&travelmode=" + gmapMode;
+            
+            window.open(multiStopUrl, '_blank');
         }
 
         function restoreLoadedTrip() {
@@ -525,7 +564,28 @@
 
         function processNewPlace(place) {
             if(!itineraryData[currentDay]) itineraryData[currentDay] = [];
-            itineraryData[currentDay].push({ id: Date.now(), name: place.name || place.formatted_address, location: place.geometry.location, photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, reviews: place.reviews || [], types: place.types || [], rating: place.rating || 0, user_ratings_total: place.user_ratings_total || 0, note: "", isLocked: false });
+            
+            let placeName = place.name || place.formatted_address || "";
+            let placeTypes = place.types || [];
+            
+            let isInternal = placeName.includes('飯店') || placeName.includes('酒店') || placeName.includes('旅館') || placeName.includes('民宿') || placeName.includes('百貨') || placeName.includes('商圈') || placeTypes.includes('lodging') || placeTypes.includes('shopping_mall');
+            
+            let autoParkingMode = isInternal ? 'INTERNAL' : 'EXTERNAL';
+
+            itineraryData[currentDay].push({ 
+                id: Date.now(), 
+                name: placeName, 
+                location: place.geometry.location, 
+                photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, 
+                reviews: place.reviews || [], 
+                types: placeTypes, 
+                rating: place.rating || 0, 
+                user_ratings_total: place.user_ratings_total || 0, 
+                note: "", 
+                isLocked: false,
+                parking_mode: autoParkingMode 
+            });
+            
             updateUI(); map.panTo(place.geometry.location); clearAllRoutes(); refreshMarkersOnly();
         }
 
@@ -593,15 +653,15 @@
             if (currentItinerary.length < 2) return;
 
             let myAnalysisId = ++currentAnalysisId;
-            let placesList = currentItinerary.map((p, index) => `第 ${index + 1} 站：${p.name}`).join(' -> ');
+            let placesList = currentItinerary.map((p, index) => `第 ${index + 1} 站：${p.name}`).join('\n');
             
-            let promptValue = `使用者目前的行程順序是：${placesList}。請簡短檢查這個順序的「日夜時間合適度」。請將所有需要提醒的地點統整成「一段流暢的完整建議」，字數約 50 字以內。如果時間安排看起來很合理，請直接說「日夜時間安排看起來很順暢喔！」。絕對不要使用條列式。`;
+            let promptValue = `使用者目前的行程順序是：\n${placesList}\n\n請執行兩個任務：\n1. 簡短檢查這個順序的「日夜時間合適度」。統整成一段流暢的建議（50字內），如果合理直接說「日夜時間安排看起來很順暢喔！」。絕對不要用條列式。\n2. 務必在 JSON 的 suggestions 中，為每一個景點補充「停留時間」、「預估花費」與「推薦理由」。\n⚠️ 絕對不能改變原本的景點順序，也不能刪減或新增任何景點！`;
 
             try {
                 const box = document.getElementById('ai-time-suggestion');
                 if(!box) return;
                 
-                box.innerHTML = `<div class="mt-3 text-indigo-400 text-[11px] animate-pulse flex items-center gap-1.5"><i class="bi bi-cpu"></i> AI 正在評估最佳造訪時間...</div>`;
+                box.innerHTML = `<div class="mt-3 text-indigo-400 text-[11px] animate-pulse flex items-center gap-1.5"><i class="bi bi-cpu"></i> AI 正在評估時間與補充景點資訊...</div>`;
 
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
@@ -618,6 +678,36 @@
                         <div class="flex items-center gap-1.5 mb-1.5 text-[12px] font-bold text-slate-800"><i class="bi bi-clock-history"></i> 時間檢核：</div>
                         ${data.ai_message}
                     </div>`;
+
+                    let suggestions = data.days && data.days.length > 0 ? data.days[0].suggestions : (data.suggestions || []);
+                    let hasUpdates = false;
+
+                    currentItinerary.forEach((p, index) => {
+                        let aiItem = suggestions.find(s => s.name.includes(p.name) || p.name.includes(s.name) || s.name === p.name);
+                        
+                        if (aiItem) {
+                            let modeEmoji = '🚗';
+                            if (currentMode === 'TWO_WHEELER') modeEmoji = '🛵';
+                            else if (currentMode === 'TRANSIT') modeEmoji = '🚌';
+                            else if (currentMode === 'BICYCLING') modeEmoji = '🚲';
+                            else if (currentMode === 'WALKING') modeEmoji = '🚶';
+
+                            let travel = (index === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
+                            let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
+                            let cost = aiItem.cost_estimate ? `💰 ${aiItem.cost_estimate}` : '';
+                            let reason = aiItem.reason ? `💡 ${aiItem.reason}` : '';
+                            
+                            p.ai_description = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+                            if (aiItem.parking_mode) p.parking_mode = aiItem.parking_mode;
+                            
+                            hasUpdates = true;
+                        }
+                    });
+
+                    if (hasUpdates) {
+                        updateUI();
+                    }
+
                 } else {
                     box.innerHTML = '';
                 }
@@ -884,7 +974,6 @@
 
         function toggleLock(index) { const currentItinerary = itineraryData[currentDay]; if (!currentItinerary || !currentItinerary[index]) return; currentItinerary[index].isLocked = !currentItinerary[index].isLocked; updateUI(); if (routeLines.length > 0) calculateRoute(); }
 
-        // 💡 更新：重新設計景點卡片的 UI
         function updateUI() {
             sessionStorage.setItem('trip_itinerary_memory', JSON.stringify(itineraryData));
             const currentItinerary = itineraryData[currentDay] || []; 
@@ -892,6 +981,8 @@
             document.getElementById('point-count').innerText = `${currentItinerary.length} 個地點`; 
             document.getElementById('route-btn').classList.toggle('hidden', currentItinerary.length < 2);
             document.getElementById('optimize-btn').classList.toggle('hidden', currentItinerary.length < 3);
+            
+            document.getElementById('multi-nav-btn').classList.toggle('hidden', currentItinerary.length < 2);
 
             if (currentItinerary.length === 0) { list.innerHTML = `<div class="text-center text-slate-400 py-10 text-[12px] border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">Day ${currentDay} 尚未新增地點</div>`; return; }
             
@@ -899,11 +990,9 @@
                 const isLockedClass = p.isLocked ? 'border-red-200 bg-red-50/20' : 'border-slate-200 bg-white';
                 const hasParkingNote = p.ai_description && (p.ai_description.includes('停車') || p.ai_description.includes('找車位'));
                 
-                // 💡 新增：判斷這個景點是不是「住宿 (lodging)」
                 const isLodging = p.types && p.types.includes('lodging');
                 
-                // 💡 修改：改用標準的 Google Maps API 連結以防在編輯器中報錯
-                const mapsUrlBase = "https://www.google.com/maps/dir/?api=1&destination=";
+                const mapsUrlBase = "https://www.google.com/maps/search/?api=1&query=";
                 
                 return `
                 <div class="${isLockedClass} border rounded-2xl p-4 shadow-sm group animate-in slide-in-from-left duration-200 relative">
@@ -917,13 +1006,9 @@
                                 <button onclick="toggleDetail(${i})" class="text-slate-400 hover:text-indigo-600 transition flex-shrink-0" title="查看景點資訊">
                                     <i class="bi bi-info-circle"></i>
                                 </button>
-                                
-                                <a href="${mapsUrlBase}${p.location.lat()},${p.location.lng()}" target="_blank" class="text-slate-400 hover:text-emerald-500 transition flex-shrink-0" title="開啟 Google 導航">
-                                    <i class="bi bi-cursor-fill"></i>
-                                </a>
 
                                 ${isLodging ? `
-                                <a href="https://www.agoda.com/zh-tw/search?text=${encodeURIComponent(p.name)}" target="_blank" class="text-slate-400 hover:text-sky-500 transition flex-shrink-0" title="一鍵搜出好房價 (Agoda)">
+                                <a href="https://www.booking.com/searchresults.zh-tw.html?ss=${encodeURIComponent(p.name)}" target="_blank" class="text-slate-400 hover:text-blue-600 transition flex-shrink-0" title="一鍵搜出好房價 (Booking.com)">
                                     <i class="bi bi-building-check"></i>
                                 </a>
                                 ` : ''}
@@ -972,7 +1057,6 @@
             const promptValue = document.getElementById('ai-chat-prompt').value;
             if (!promptValue) return alert("請輸入您的想法喔！");
 
-            // 💡 新增：偷偷在背後加上「系統強制緊箍咒」，逼 AI 給出具體實體
             const enhancedPrompt = promptValue + "\n\n(系統強制指令：1. 如果使用者要求尋找住宿，請直接給出「具體且真實存在的飯店/旅館名稱」。2. 絕對不要給出「某某周邊」、「某某考察」、「尋找住宿」這種模糊的行程動作。3. 景點名稱請保持乾淨，不要在名稱後面加括號補充說明。)";
 
             const btn = document.getElementById('ai-gen-btn');
@@ -1016,7 +1100,6 @@
                                 let item = dayObj.suggestions[index];
                                 let isDashboard = item.name.includes('出發') || item.name.includes('回家') || item.name.includes('巷') || item.name.includes('號') || item.name.includes('住家') || item.name.includes('返程');
                                 
-                                // 💡 新增：AI 住宿雷達！自動偵測名稱是否包含飯店關鍵字
                                 let isHotel = item.name.includes('飯店') || item.name.includes('酒店') || item.name.includes('旅館') || item.name.includes('民宿') || item.name.includes('商旅') || item.name.includes('行館') || item.name.includes('渡假村') || item.name.includes('Hotel') || item.name.includes('Resort');
                                 
                                 let finalLocation = new google.maps.LatLng(item.lat, item.lng);
@@ -1031,10 +1114,9 @@
                                 
                                 let aiDesc = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
 
-                                // 💡 新增：動態賦予標籤，讓 isLodging 可以抓到
-                                let placeTypes = ['tourist_attraction']; // 預設為景點
+                                let placeTypes = ['tourist_attraction']; 
                                 if (isDashboard) placeTypes = ['premise'];
-                                if (isHotel) placeTypes = ['lodging', 'tourist_attraction']; // 給予住宿標籤
+                                if (isHotel) placeTypes = ['lodging', 'tourist_attraction']; 
 
                                 newPoints.push({
                                     id: Date.now() + index + (dayNum * 1000), 
@@ -1046,7 +1128,6 @@
                                     types: placeTypes, 
                                     reviews: [], 
                                     isLocked: false,
-                                    // 💡 關鍵修正：把 AI 傳過來的停車模式存進去！
                                     parking_mode: item.parking_mode || null
                                 });
                             }
