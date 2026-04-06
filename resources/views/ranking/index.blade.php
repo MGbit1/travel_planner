@@ -67,7 +67,7 @@
                         <i class="bi bi-people-fill text-indigo-400"></i>
                         已有 <strong class="text-slate-800 text-base">{{ $place['count'] }}</strong> 位旅人將此景點排入行程
                     </p>
-                    <a href="/map" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition w-fit shadow-sm">
+                    <a href="/map?search={{ urlencode($place['name']) }}" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm px-6 py-3 rounded-xl transition w-fit shadow-sm">
                         <i class="bi bi-map-fill"></i> 加入我的行程
                     </a>
                 </div>
@@ -100,7 +100,7 @@
                     @endif
                     <div class="mt-auto flex items-center justify-between pt-3 border-t border-slate-100">
                         <span class="text-sm font-bold text-slate-700 flex items-center gap-1.5"><i class="bi bi-people-fill text-indigo-400"></i> {{ $place['count'] }} 人排入</span>
-                        <a href="/map" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">加入行程 <i class="bi bi-arrow-right"></i></a>
+                        <a href="/map?search={{ urlencode($place['name']) }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">加入行程 <i class="bi bi-arrow-right"></i></a>
                     </div>
                 </div>
             </div>
@@ -146,7 +146,7 @@
                     @endif
                     <div class="mt-auto flex items-center justify-between pt-2.5 border-t border-slate-100">
                         <span class="text-xs text-slate-500 flex items-center gap-1"><i class="bi bi-people-fill text-indigo-300 text-[10px]"></i> {{ $place['count'] }} 人排入</span>
-                        <a href="/map" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 transition"><i class="bi bi-plus-circle"></i></a>
+                        <a href="/map?search={{ urlencode($place['name']) }}" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-0.5 transition"><i class="bi bi-plus-circle"></i></a>
                     </div>
                 </div>
             </div>

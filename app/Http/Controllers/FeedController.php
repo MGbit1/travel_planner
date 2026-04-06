@@ -41,18 +41,36 @@ class FeedController extends Controller
         $request->validate([
             'title' => 'required|string|max:100',
             'content' => 'nullable|string|max:2000',
-            'trip_id' => 'required|exists:trips,id', // 必須綁定一個行程
+            'trip_id' => 'required|exists:trips,id',
         ]);
 
-        // 抓取行程天數 (假設前端沒有傳，我們從行程的 JSON 資料判斷，這裡先預設為傳入或 1)
         $daysCount = $request->input('days_count', 1);
 
+        // 自動從行程景點資料中擷取封面照片
+        $imageUrl = $request->image_url ?: null;
+        if (empty($imageUrl)) {
+            $trip = Trip::find($request->trip_id);
+            if ($trip && $trip->itinerary_data) {
+                $itinerary = is_array($trip->itinerary_data)
+                    ? $trip->itinerary_data
+                    : json_decode($trip->itinerary_data, true);
+                foreach ((array) $itinerary as $places) {
+                    foreach ((array) $places as $place) {
+                        if (!empty($place['photo'])) {
+                            $imageUrl = $place['photo'];
+                            break 2;
+                        }
+                    }
+                }
+            }
+        }
+
         $post = Post::create([
-            'user_id' => Auth::id(),
-            'trip_id' => $request->trip_id,
-            'title' => $request->title,
-            'content' => $request->content,
-            'image_url' => $request->image_url, // 可選的封面圖
+            'user_id'   => Auth::id(),
+            'trip_id'   => $request->trip_id,
+            'title'     => $request->title,
+            'content'   => $request->content,
+            'image_url' => $imageUrl,
             'days_count' => $daysCount,
         ]);
 
@@ -77,11 +95,20 @@ class FeedController extends Controller
             'content' => 'required|string|max:500',
         ]);
 
-        Comment::create([
+        $comment = Comment::create([
             'user_id' => Auth::id(),
             'post_id' => $post->id,
             'content' => $request->content,
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'id'           => $comment->id,
+                'content'      => $comment->content,
+                'user_name'    => Auth::user()->name,
+                'user_initial' => mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)),
+            ]);
+        }
 
         return back()->with('success', '💬 留言成功！');
     }
@@ -94,6 +121,11 @@ class FeedController extends Controller
         }
 
         $comment->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['status' => 'deleted']);
+        }
+
         return back()->with('success', '🗑️ 留言已刪除。');
     }
 

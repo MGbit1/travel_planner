@@ -225,7 +225,7 @@
                         <span class="text-xs text-slate-500 font-medium flex items-center gap-1">
                             <i class="bi bi-people-fill text-indigo-400"></i> {{ $place['count'] }} 人排入行程
                         </span>
-                        <a href="/map" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">
+                        <a href="/map?search={{ urlencode($place['name']) }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">
                             加入行程 <i class="bi bi-plus-circle"></i>
                         </a>
                     </div>
@@ -265,7 +265,7 @@
                     <span class="inline-block text-[10px] font-semibold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md w-fit mb-3">{{ $spot['tag'] }}</span>
                     <div class="mt-auto flex items-center justify-between pt-3 border-t border-slate-100">
                         <span class="text-xs text-slate-500 font-medium flex items-center gap-1"><i class="bi bi-people-fill text-indigo-400"></i> 熱門景點</span>
-                        <a href="/map" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">加入行程 <i class="bi bi-plus-circle"></i></a>
+                        <a href="/map?search={{ urlencode($spot['name']) }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 transition">加入行程 <i class="bi bi-plus-circle"></i></a>
                     </div>
                 </div>
             </div>

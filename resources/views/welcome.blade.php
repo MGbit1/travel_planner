@@ -307,11 +307,23 @@
                 updateUI(); 
             }
 
+            // 從榜單/首頁點「加入行程」帶入的景點名稱，自動填入搜尋框並觸發搜尋
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                window.history.replaceState({}, document.title, "/map");
+                setTimeout(() => {
+                    const input = document.getElementById("pac-input");
+                    input.value = decodeURIComponent(searchParam);
+                    searchPlace();
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 1000);
+            }
+
             setTimeout(() => {
                 const loader = document.getElementById('global-loader');
                 if (loader) {
                     loader.classList.add('opacity-0');
-                    setTimeout(() => loader.remove(), 500); 
+                    setTimeout(() => loader.remove(), 500);
                 }
             }, 800);
         }
