@@ -61,7 +61,7 @@
                         </div>
                         <p class="text-slate-700 text-sm font-bold">目前還沒有儲存任何行程</p>
                         <p class="text-slate-400 text-xs mt-1.5 font-medium">開始規劃你的下一趟完美旅程吧！</p>
-                        <a href="/?new=1" class="inline-block mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
+                        <a href="/map?new=1" class="inline-block mt-6 bg-white border border-slate-200 text-slate-700 px-6 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-50 transition shadow-sm">
                             <i class="bi bi-compass mr-1"></i> 前往探索地圖
                         </a>
                     </div>

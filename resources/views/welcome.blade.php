@@ -72,36 +72,35 @@
                 <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
             </div>
 
-            <div class="px-6 py-4 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30">
+            <div class="px-5 py-3.5 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
                 <a href="/" class="block hover:opacity-80 transition">
-                    <h1 class="text-xl font-extrabold tracking-tight text-slate-800">TripFlow<span class="text-indigo-600">.</span></h1>
-                    <p class="text-slate-400 text-[10px] font-medium tracking-widest mt-0.5 uppercase">Smart Planning</p>
+                    <h1 class="text-lg font-extrabold tracking-tight text-slate-800">TripFlow<span class="text-indigo-600">.</span></h1>
+                    <p class="text-slate-400 text-[9px] font-bold tracking-[0.2em] mt-0.5 uppercase">地圖規劃</p>
                 </a>
-                
-                <div class="flex items-center gap-4">
+
+                <div class="flex items-center gap-3">
                     @if (Route::has('login'))
                         @auth
-                            <div class="flex items-center text-[12px] font-medium text-slate-500 gap-4 pr-4 border-r border-slate-200">
-                                <a href="{{ route('feed.index') }}" class="hover:text-slate-900 transition flex items-center gap-1.5"><i class="bi bi-compass"></i> 社群</a>
-                                <a href="/ranking" class="hover:text-slate-900 transition flex items-center gap-1.5"><i class="bi bi-trophy"></i> 榜單</a>
+                            <div class="hidden sm:flex items-center text-[11px] font-semibold text-slate-400 gap-3 pr-3 border-r border-slate-200">
+                                <a href="{{ route('feed.index') }}" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-compass"></i> 社群</a>
+                                <a href="/ranking" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-trophy"></i> 榜單</a>
+                                <a href="{{ route('dashboard') }}" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-grid-1x2"></i> 行程</a>
                             </div>
-                            <div class="flex flex-col items-end">
-                                <a href="{{ route('dashboard') }}" class="text-[12px] text-slate-800 font-bold hover:text-indigo-600 transition flex items-center gap-1">
-                                    <i class="bi bi-person-circle"></i> 我的行程
-                                </a>
-                            </div>
+                            <span class="hidden sm:block text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
+                                <i class="bi bi-person-circle text-indigo-400"></i> {{ Auth::user()->name }}
+                            </span>
                         @else
-                            <div class="flex items-center gap-3">
-                                <a href="{{ route('login') }}" class="text-[12px] font-medium text-slate-500 hover:text-slate-900 transition">登入</a>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('login') }}" class="text-[11px] font-semibold text-slate-500 hover:text-slate-900 transition">登入</a>
                                 @if (Route::has('register'))
-                                    <a href="{{ route('register') }}" class="bg-slate-800 text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition shadow-sm">免費註冊</a>
+                                    <a href="{{ route('register') }}" class="bg-slate-800 text-white hover:bg-slate-700 px-3 py-1.5 rounded-lg text-[11px] font-bold transition shadow-sm">免費註冊</a>
                                 @endif
                             </div>
                         @endauth
                     @endif
 
-                    <button onclick="saveFullTrip()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-[12px] font-semibold shadow-sm transition flex items-center gap-1.5 ml-1">
-                        <i class="bi bi-cloud-arrow-up-fill"></i> 存檔
+                    <button onclick="saveFullTrip()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm transition flex items-center gap-1.5">
+                        <i class="bi bi-cloud-arrow-up-fill"></i> 儲存行程
                     </button>
                 </div>
             </div>
@@ -127,19 +126,43 @@
                     <button onclick="updateTravelMode('WALKING')" class="mode-btn p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl text-[12px] font-medium" id="btn-WALKING"><i class="bi bi-person-walking text-lg"></i><span>步行</span></button>
                 </div>
 
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3 relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
-                    <label class="text-[12px] font-bold text-slate-800 flex items-center gap-2">
-                        <i class="bi bi-stars text-indigo-500"></i> AI 智慧規劃助手
-                        <span class="text-[10px] font-normal text-slate-400 ml-auto">包含備案與時間精算</span>
-                    </label>
-                    <textarea id="ai-chat-prompt" rows="2" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition resize-none custom-scrollbar placeholder:text-slate-400" 
-                        placeholder="請描述您的想法，例如：明天下午想去台北車站附近喝咖啡看書..."></textarea>
-                    <button onclick="askAIForItinerary()" id="ai-gen-btn" 
-                        class="w-full bg-slate-800 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-700 transition shadow-sm flex justify-center items-center gap-2">
-                        <i class="bi bi-magic" id="ai-btn-icon"></i> <span id="ai-btn-text">生成建議路線</span>
-                    </button>
+                {{-- ✨ AI 智慧規劃助手 - 主打功能 --}}
+                <div class="relative rounded-2xl overflow-hidden shadow-md">
+                    {{-- 漸層背景 --}}
+                    <div class="absolute inset-0 bg-gradient-to-br from-violet-600 via-indigo-600 to-indigo-700"></div>
+                    {{-- 裝飾光暈 --}}
+                    <div class="absolute -top-6 -right-6 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-400/20 rounded-full blur-xl pointer-events-none"></div>
+
+                    <div class="relative p-5 space-y-4">
+                        {{-- Header row --}}
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner border border-white/30 shrink-0">
+                                    <i class="bi bi-robot text-white text-lg"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-extrabold text-[13px] leading-tight">AI 智慧規劃助手</p>
+                                    <p class="text-indigo-200 text-[10px] font-medium">含備案、時間與費用精算</p>
+                                </div>
+                            </div>
+                            <span class="shrink-0 bg-white/20 backdrop-blur-sm text-white text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/30 flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span> Gemini AI
+                            </span>
+                        </div>
+
+                        {{-- Textarea --}}
+                        <textarea id="ai-chat-prompt" rows="3"
+                            class="w-full bg-white/15 backdrop-blur-sm border border-white/25 rounded-xl px-4 py-3 text-[13px] text-white placeholder:text-indigo-200/70 focus:bg-white/25 focus:ring-2 focus:ring-white/30 focus:border-white/40 outline-none transition resize-none custom-scrollbar"
+                            placeholder="描述你的想法，例如：明天想去台北車站附近喝咖啡看書..."></textarea>
+
+                        {{-- Generate button --}}
+                        <button onclick="askAIForItinerary()" id="ai-gen-btn"
+                            class="w-full bg-white hover:bg-indigo-50 active:bg-indigo-100 text-indigo-700 py-2.5 rounded-xl text-[13px] font-extrabold transition shadow-lg flex justify-center items-center gap-2 border border-white/50">
+                            <i class="bi bi-stars text-indigo-500" id="ai-btn-icon"></i>
+                            <span id="ai-btn-text">✦ 生成建議路線</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="route-toggles" class="hidden bg-white p-4 rounded-xl border border-slate-200 space-y-3 animate-fade-in-up">
@@ -245,7 +268,7 @@
             sessionStorage.removeItem('trip_ai_memory');
             sessionStorage.removeItem('trip_itinerary_memory');
             aiChatHistory = {}; 
-            window.history.replaceState({}, document.title, "/");
+            window.history.replaceState({}, document.title, "/map");
         }
 
         let markers = [], routeLines = [], routeLabels = [];
