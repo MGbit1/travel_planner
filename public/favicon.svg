@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 背景圓形 -->
+  <circle cx="32" cy="32" r="32" fill="#4f46e5"/>
+  <!-- 指南針外圈 -->
+  <circle cx="32" cy="32" r="20" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2"/>
+  <!-- 指南針箭頭 - 北（白色） -->
+  <polygon points="32,12 28,32 32,28 36,32" fill="white"/>
+  <!-- 指南針箭頭 - 南（indigo 淺色） -->
+  <polygon points="32,52 36,32 32,36 28,32" fill="rgba(255,255,255,0.4)"/>
+  <!-- 中心點 -->
+  <circle cx="32" cy="32" r="3" fill="white"/>
+</svg>
