@@ -14,6 +14,8 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+        @stack('styles')
+
         <style>
             body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; }
             ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -39,7 +41,8 @@
             <main class="flex-1 w-full">
                 {{ $slot }}
             </main>
-            
+
         </div>
+        @stack('scripts')
     </body>
 </html>

@@ -21,7 +21,7 @@
                         <h3 class="text-xl font-bold text-slate-800 tracking-tight">所有旅程</h3>
                         <p class="text-sm text-slate-500 mt-1 font-medium">管理您儲存的旅遊草稿與計畫</p>
                     </div>
-                    <a href="/?new=1" class="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-700 transition flex items-center gap-2">
+                    <a href="/map?new=1" class="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-700 transition flex items-center gap-2">
                         <i class="bi bi-plus-lg"></i> 建立新行程
                     </a>
                 </div>
@@ -43,7 +43,7 @@
                                 </div>
                                 
                                 <div class="mt-auto flex gap-2.5">
-                                    <a href="/?trip_id={{ $trip->id }}" class="flex-1 bg-white border border-slate-200 text-slate-700 text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-50 hover:border-slate-300 transition">
+                                    <a href="/map?trip_id={{ $trip->id }}" class="flex-1 bg-white border border-slate-200 text-slate-700 text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-50 hover:border-slate-300 transition">
                                         載入編輯
                                     </a>
                                     

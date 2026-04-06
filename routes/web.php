@@ -1,26 +1,26 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\MapController; 
-use App\Http\Controllers\TripController; 
+use App\Http\Controllers\MapController;
+use App\Http\Controllers\TripController;
+use App\Http\Controllers\LandingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\RankingController;
 
-// 💡 修改這段：如果網址有 trip_id，就把對應的行程撈出來傳給首頁
-Route::get('/', function () {
+// 首頁（Landing Page）
+Route::get('/', [LandingController::class, 'index'])->name('landing');
+
+// 地圖規劃頁
+Route::get('/map', function () {
     $loadedTrip = null;
-    
-    // 確認有傳入 trip_id 參數，而且使用者有登入
     if (request()->has('trip_id') && auth()->check()) {
-        // 去資料庫找這筆行程 (加上 user_id 防護，確保只能載入自己的)
         $loadedTrip = \App\Models\Trip::where('id', request()->query('trip_id'))
                         ->where('user_id', auth()->id())
                         ->first();
     }
-    
     return view('welcome', compact('loadedTrip'));
-});
+})->name('map');
 
 Route::post('/ai-generate', [MapController::class, 'generateAI']);
 
