@@ -12,7 +12,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvAAdWjnxCHy6kfojvWq4iO4wKHOl14eY&libraries=places,marker&v=beta&language=zh-TW&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ env('GOOGLE_MAPS_API_KEY') }}&libraries=places,marker&v=beta&language=zh-TW&callback=initMap" async defer></script>
 
     <style>
         body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; }
