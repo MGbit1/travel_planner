@@ -88,11 +88,21 @@ class MapController extends Controller
     }
 
     public function generateAI(Request $request) {
+        // 每位登入用戶每 60 秒限制 1 次，未登入則以 IP 為鍵
+        $rateLimitKey = 'ai-generate-' . (auth()->id() ?? $request->ip());
+        $executed = RateLimiter::attempt($rateLimitKey, 1, function () { return true; }, 60);
+        if (!$executed) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => '⚠️ 伺服器冷卻中！請等待 60 秒後再按，避免 API Key 被鎖定。',
+            ], 429);
+        }
+
         $userPrompt = $request->input('prompt');
         $history = $request->input('history', []);
         $allItineraries = $request->input('all_itineraries', []);
         $apiKey = trim(env('GEMINI_API_KEY'));
-        
+
         $currentDay = $request->input('current_day', 1);
 
         if (empty($apiKey)) {
@@ -176,15 +186,33 @@ class MapController extends Controller
             }
             
             $resData = $response->json();
-            $rawText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            $cleanJson = preg_replace('/^```json\s*|```\s*$/', '', trim($rawText));
-            $result = json_decode($cleanJson, true);
+
+            // 驗證 Gemini 回應結構是否完整
+            if (!isset($resData['candidates'][0]['content']['parts'][0]['text'])) {
+                \Log::error('Gemini API 回應結構異常', ['response' => $resData]);
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => '【AI 回應格式異常】：請稍後再試。',
+                ], 500);
+            }
+
+            $rawText   = $resData['candidates'][0]['content']['parts'][0]['text'];
+            $cleanJson = preg_replace('/^```json\s*|```\s*$/m', '', trim($rawText));
+            $result    = json_decode($cleanJson, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                \Log::error('Gemini JSON 解析失敗', ['raw' => $rawText, 'error' => json_last_error_msg()]);
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => '【AI 回傳格式錯誤】：無法解析行程資料，請再試一次。',
+                ], 500);
+            }
 
             return response()->json([
-                'status' => 'success',
-                'ai_message' => $result['ai_message'] ?? '規劃完成！',
-                'travel_mode' => $result['travel_mode'] ?? 'DRIVING',
-                'days' => $result['days'] ?? [] 
+                'status'       => 'success',
+                'ai_message'   => $result['ai_message']   ?? '規劃完成！',
+                'travel_mode'  => $result['travel_mode']  ?? 'DRIVING',
+                'days'         => $result['days']         ?? [],
             ]);
 
         } catch (\Exception $e) {

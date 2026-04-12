@@ -242,9 +242,9 @@
         
         sessionStorage.setItem('last_user_state', currentUserId);
 
-        const loadedTripJson = {!! json_encode($loadedTrip ? $loadedTrip->itinerary_data : null) !!};
-        const loadedTripTitle = {!! json_encode($loadedTrip ? $loadedTrip->title : null) !!};
-        const loadedTripChatHistory = {!! json_encode($loadedTrip ? $loadedTrip->chat_history : null) !!};
+        const loadedTripJson = @json($loadedTrip?->itinerary_data);
+        const loadedTripTitle = @json($loadedTrip?->title);
+        const loadedTripChatHistory = @json($loadedTrip?->chat_history);
 
         let map, service, geocoder, directionsService, trafficLayer;
         let itineraryData = { 1: [] };

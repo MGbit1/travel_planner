@@ -14,8 +14,8 @@ class FeedController extends Controller
     // 1. 顯示動態牆首頁
     public function index()
     {
-        // 抓取所有貼文，並附帶作者、留言數、按讚數，依照最新時間排序
-        $posts = Post::with(['user'])->withCount(['comments', 'likes'])->latest()->paginate(15);
+        // 抓取所有貼文，並附帶作者、行程、留言數、按讚數，依照最新時間排序
+        $posts = Post::with(['user', 'trip'])->withCount(['comments', 'likes'])->latest()->paginate(15);
         
         return view('feed.index', compact('posts'));
     }

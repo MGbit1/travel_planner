@@ -79,16 +79,16 @@
 
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white border-b border-slate-200">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link href="/map" :active="request()->is('map')">
+            <x-responsive-nav-link href="/map" :active="request()->is('map')" @click="open = false">
                 {{ __('探索地圖') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link href="/feed" :active="request()->is('feed*')">
+            <x-responsive-nav-link href="/feed" :active="request()->is('feed*')" @click="open = false">
                 {{ __('靈感社群') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link href="/ranking" :active="request()->is('ranking*')">
+            <x-responsive-nav-link href="/ranking" :active="request()->is('ranking*')" @click="open = false">
                 {{ __('熱門榜單') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard*')" @click="open = false">
                 {{ __('我的行程') }}
             </x-responsive-nav-link>
         </div>
@@ -101,7 +101,7 @@
             </div>
 
             <div class="mt-3 space-y-1">
-                <x-responsive-nav-link :href="route('profile.edit')">
+                <x-responsive-nav-link :href="route('profile.edit')" @click="open = false">
                     {{ __('個人設定') }}
                 </x-responsive-nav-link>
 
