@@ -8,6 +8,7 @@ use App\Models\PostLike;
 use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class FeedController extends Controller
 {
@@ -25,10 +26,13 @@ class FeedController extends Controller
     {
         // 增加瀏覽次數
         $post->increment('views_count');
-        
+
         // 載入關聯資料：作者、行程、留言(含留言者)
         $post->load(['user', 'trip', 'comments.user']);
-        
+
+        // 載入按讚數與留言數
+        $post->loadCount(['likes', 'comments']);
+
         // 檢查當前使用者是否已按讚
         $isLiked = Auth::check() ? $post->likes()->where('user_id', Auth::id())->exists() : false;
 
@@ -39,15 +43,22 @@ class FeedController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:100',
+            'title'   => 'required|string|max:100',
             'content' => 'nullable|string|max:2000',
             'trip_id' => 'required|exists:trips,id',
+            'image'   => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
         $daysCount = $request->input('days_count', 1);
 
-        // 自動從行程景點資料中擷取封面照片
-        $imageUrl = $request->image_url ?: null;
+        // 優先使用上傳的圖片
+        $imageUrl = null;
+        if ($request->hasFile('image') && $request->file('image')->isValid()) {
+            $path = $request->file('image')->store('posts', 'public');
+            $imageUrl = Storage::disk('public')->url($path);
+        }
+
+        // 若未上傳圖片，嘗試從行程景點資料中擷取封面照片
         if (empty($imageUrl)) {
             $trip = Trip::find($request->trip_id);
             if ($trip && $trip->itinerary_data) {
@@ -65,12 +76,12 @@ class FeedController extends Controller
             }
         }
 
-        $post = Post::create([
-            'user_id'   => Auth::id(),
-            'trip_id'   => $request->trip_id,
-            'title'     => $request->title,
-            'content'   => $request->content,
-            'image_url' => $imageUrl,
+        Post::create([
+            'user_id'    => Auth::id(),
+            'trip_id'    => $request->trip_id,
+            'title'      => $request->title,
+            'content'    => $request->content,
+            'image_url'  => $imageUrl,
             'days_count' => $daysCount,
         ]);
 

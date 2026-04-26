@@ -38,7 +38,9 @@
         @if($posts && $posts->count() > 0)
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 @foreach($posts as $post)
-                    <a href="{{ route('feed.show', $post->id) }}" class="block group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
+                    {{-- 使用 div+onclick 讓作者刪除按鈕可正常放置 --}}
+                    <div class="group bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full cursor-pointer relative"
+                         onclick="if(!event.target.closest('form,button')) window.location.href='{{ route('feed.show', $post->id) }}'">
 
                         <div class="relative h-48 bg-slate-100 overflow-hidden">
                             @if($post->image_url)
@@ -77,10 +79,24 @@
                                     <span class="flex items-center gap-1"><i class="bi bi-heart-fill text-rose-300 group-hover:text-rose-400 transition-colors"></i> {{ $post->likes_count ?? 0 }}</span>
                                     <span class="flex items-center gap-1"><i class="bi bi-chat-fill text-slate-300"></i> {{ $post->comments_count ?? 0 }}</span>
                                     <span class="flex items-center gap-1"><i class="bi bi-eye-fill text-slate-300"></i> {{ $post->views_count ?? 0 }}</span>
+                                    @auth
+                                    @if(Auth::id() === $post->user_id)
+                                    <form action="{{ route('feed.destroy', $post->id) }}" method="POST"
+                                          onsubmit="return confirm('確定要刪除這篇貼文嗎？')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                            class="text-slate-300 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition"
+                                            title="刪除貼文">
+                                            <i class="bi bi-trash3 text-xs"></i>
+                                        </button>
+                                    </form>
+                                    @endif
+                                    @endauth
                                 </div>
                             </div>
                         </div>
-                    </a>
+                    </div>
                 @endforeach
             </div>
 

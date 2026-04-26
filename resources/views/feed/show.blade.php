@@ -124,16 +124,27 @@
             class="flex items-center gap-2.5 px-4 py-2 rounded-xl font-bold transition-all text-sm
                    {{ $isLiked ? 'bg-rose-50 text-rose-500 border border-rose-100' : 'bg-slate-50 text-slate-500 border border-slate-200 hover:border-rose-200 hover:text-rose-400' }}">
             <i id="like-icon" class="bi {{ $isLiked ? 'bi-heart-fill' : 'bi-heart' }} text-base"></i>
-            <span id="like-count">{{ $post->likes_count }}</span> 個喜歡
+            <span id="like-count">{{ $post->likes_count ?? 0 }}</span> 個喜歡
         </button>
         <div class="flex items-center gap-4 text-[13px] text-slate-400 font-semibold">
             <span class="flex items-center gap-1.5"><i class="bi bi-eye"></i> {{ $post->views_count }}</span>
-            <span class="flex items-center gap-1.5"><i class="bi bi-chat-dots"></i> <span id="comment-count-top">{{ $post->comments_count }}</span></span>
+            <span class="flex items-center gap-1.5"><i class="bi bi-chat-dots"></i> <span id="comment-count-top">{{ $post->comments_count ?? 0 }}</span></span>
             @if($post->trip_id)
             <a href="/map?trip_id={{ $post->trip_id }}"
                class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm">
                 <i class="bi bi-map-fill"></i> 載入此行程
             </a>
+            @endif
+            @if(Auth::id() === $post->user_id)
+            <form action="{{ route('feed.destroy', $post->id) }}" method="POST"
+                  onsubmit="return confirm('確定要刪除這篇貼文嗎？此動作無法復原！')">
+                @csrf
+                @method('DELETE')
+                <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-500 font-bold px-3 py-2 rounded-xl text-xs transition border border-red-100">
+                    <i class="bi bi-trash3"></i> 刪除貼文
+                </button>
+            </form>
             @endif
         </div>
     </div>
@@ -240,7 +251,7 @@
         <div class="px-6 md:px-8 pt-6 pb-4 border-b border-slate-100 flex items-center justify-between">
             <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
                 <i class="bi bi-chat-dots-fill text-indigo-500"></i> 留言討論
-                <span id="comment-count" class="text-sm font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $post->comments_count }}</span>
+                <span id="comment-count" class="text-sm font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $post->comments_count ?? 0 }}</span>
             </h2>
         </div>
 
@@ -411,9 +422,8 @@ async function deleteComment(commentId) {
     if (!confirm('確定要刪除這則留言嗎？')) return;
     try {
         const res = await fetch(`/comments/${commentId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
-            body: JSON.stringify({ _method: 'DELETE' })
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF }
         });
         if (!res.ok) throw new Error('failed');
         const el = document.getElementById(`comment-${commentId}`);
