@@ -57,7 +57,7 @@
                                         載入編輯
                                     </a>
 
-                                    <button onclick="openShareModal({{ $trip->id }}, @json($trip->title), {{ is_array($trip->itinerary_data) ? count($trip->itinerary_data) : 1 }})" class="flex-1 bg-slate-800 text-white text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-700 transition shadow-sm">
+                                    <button onclick="openShareModal({{ $trip->id }}, '{{ addslashes($trip->title) }}', {{ is_array($trip->itinerary_data) ? count($trip->itinerary_data) : 1 }})" class="flex-1 bg-slate-800 text-white text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-700 transition shadow-sm">
                                         分享至社群
                                     </button>
                                 </div>

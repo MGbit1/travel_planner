@@ -386,11 +386,13 @@
             updateUI();
             
             if (hasPoints) {
-                map.fitBounds(bounds);
-                refreshMarkersOnly();
-                if (itineraryData[currentDay].length >= 2) {
-                    calculateRoute();
-                }
+                setTimeout(() => {
+                    map.fitBounds(bounds);
+                    refreshMarkersOnly();
+                    if (itineraryData[currentDay] && itineraryData[currentDay].length >= 2) {
+                        calculateRoute();
+                    }
+                }, 300);
             }
 
             setTimeout(() => {
