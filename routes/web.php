@@ -22,7 +22,7 @@ Route::get('/map', function () {
     return view('welcome', compact('loadedTrip'));
 })->name('map');
 
-Route::post('/ai-generate', [MapController::class, 'generateAI']);
+Route::post('/ai-generate', [MapController::class, 'generateAI'])->middleware('auth');
 
 // 把使用者的行程撈出來傳給視圖
 Route::get('/dashboard', function () {

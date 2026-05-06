@@ -35,7 +35,8 @@
                                     <h4 class="font-bold text-lg text-slate-800 truncate pr-4 group-hover:text-indigo-600 transition-colors">{{ $trip->title }}</h4>
                                     <div class="flex items-center gap-1.5">
                                         <form action="{{ route('trips.destroy', $trip->id) }}" method="POST"
-                                              onsubmit="return confirm('確定要刪除「{{ addslashes($trip->title) }}」這個行程嗎？此動作無法復原！')">
+                                              data-title="{{ $trip->title }}"
+                                              onsubmit="return confirm('確定要刪除「' + this.dataset.title + '」這個行程嗎？此動作無法復原！')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-slate-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition" title="刪除行程">
@@ -57,7 +58,12 @@
                                         載入編輯
                                     </a>
 
-                                    <button onclick="openShareModal({{ $trip->id }}, '{{ addslashes($trip->title) }}', {{ is_array($trip->itinerary_data) ? count($trip->itinerary_data) : 1 }})" class="flex-1 bg-slate-800 text-white text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-700 transition shadow-sm">
+                                    <button
+                                        data-trip-id="{{ $trip->id }}"
+                                        data-trip-title="{{ $trip->title }}"
+                                        data-days="{{ is_array($trip->itinerary_data) ? count($trip->itinerary_data) : 1 }}"
+                                        onclick="openShareModal(this.dataset.tripId, this.dataset.tripTitle, this.dataset.days)"
+                                        class="flex-1 bg-slate-800 text-white text-center py-2 rounded-xl text-[13px] font-semibold hover:bg-slate-700 transition shadow-sm">
                                         分享至社群
                                     </button>
                                 </div>

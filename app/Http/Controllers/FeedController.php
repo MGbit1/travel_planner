@@ -45,7 +45,11 @@ class FeedController extends Controller
         $request->validate([
             'title'   => 'required|string|max:100',
             'content' => 'nullable|string|max:2000',
-            'trip_id' => 'required|exists:trips,id',
+            'trip_id' => ['required', 'exists:trips,id', function ($attr, $value, $fail) {
+                if (!\App\Models\Trip::where('id', $value)->where('user_id', Auth::id())->exists()) {
+                    $fail('這不是你的行程！');
+                }
+            }],
             'image'   => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
