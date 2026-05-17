@@ -703,11 +703,13 @@
 
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
                     body: JSON.stringify({ prompt: promptValue, mode: currentMode, history: [], all_itineraries: {} })
                 });
 
-                if (myAnalysisId !== currentAnalysisId) return; 
+                if (myAnalysisId !== currentAnalysisId) return;
+
+                if (response.status === 401) { const box = document.getElementById('ai-time-suggestion'); if(box) box.innerHTML = ''; return; }
 
                 const data = await response.json();
 
@@ -774,12 +776,14 @@
             try {
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
                     body: JSON.stringify({ prompt: promptValue, mode: currentMode, history: [], all_itineraries: {} })
                 });
 
+                if (response.status === 401) { alert("🔒 請先登入才能使用 AI 功能！"); return; }
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.status === 'success') {
                     let newOrder = [];
                     let unmatched = [...currentItinerary];
@@ -1110,12 +1114,17 @@
                 if (!aiChatHistory[currentDay]) aiChatHistory[currentDay] = [];
                 const response = await fetch('/ai-generate', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
                     body: JSON.stringify({ prompt: enhancedPrompt, mode: currentMode, history: aiChatHistory[currentDay], all_itineraries: itineraryData, current_day: currentDay })
                 });
 
+                if (response.status === 401) {
+                    alert("🔒 請先登入才能使用 AI 規劃功能！\n點擊右上角「登入」或「免費註冊」即可開始。");
+                    return;
+                }
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.status === 'success') {
                     aiChatHistory[currentDay].push({ role: 'user', text: promptValue });
                     aiChatHistory[currentDay].push({ role: 'model', text: `行程規劃完畢。總結：${data.ai_message}` });
