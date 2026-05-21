@@ -20,12 +20,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 💡 助教終極版：自動判斷來源！
-        // 如果不是在終端機執行指令，且來源包含了 ngrok，才強制轉換網址
         if (!app()->runningInConsole()) {
             $host = request()->header('x-forwarded-host');
+
+            // ngrok 本地隧道
             if ($host && str_contains($host, 'ngrok')) {
                 URL::forceRootUrl('https://' . $host);
+                URL::forceScheme('https');
+            }
+
+            // 正式環境（Render 等雲端平台）強制 HTTPS
+            if (config('app.env') !== 'local') {
                 URL::forceScheme('https');
             }
         }
