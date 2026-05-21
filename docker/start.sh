@@ -19,6 +19,10 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# 設定 Nginx 監聽埠（Render 會設定 PORT 環境變數，預設 10000）
+PORT=${PORT:-10000}
+sed -i "s/listen 8000/listen $PORT/g" /etc/nginx/sites-available/default
+
 # 啟動 PHP-FPM（背景）
 php-fpm -D
 

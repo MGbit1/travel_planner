@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-fpm
 
 # 安裝系統套件
 RUN apt-get update && apt-get install -y \
@@ -42,6 +42,6 @@ COPY docker/nginx.conf /etc/nginx/sites-available/default
 COPY docker/start.sh /start.sh
 RUN chmod +x /start.sh
 
-EXPOSE 8000
+EXPOSE 10000
 
 CMD ["/start.sh"]
