@@ -1,13 +1,19 @@
 FROM php:8.2-fpm
 
-# 安裝系統套件
+# 1. 先安裝 Debian 系統依賴套件（編譯 PHP 擴充必要的底層工具）
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip nginx \
-    libpng-dev libonig-dev libxml2-dev \
-    libpq-dev libzip-dev \
+    git curl unzip nginx \
+    libpq-dev \
+    libonig-dev \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libicu-dev \
+    libxml2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 安裝 PHP 擴充套件（含 PostgreSQL）
+# 2. 接著再安心安裝 PHP 擴充套件（含 PostgreSQL）
 RUN docker-php-ext-install \
     pdo pdo_pgsql pgsql \
     mbstring zip bcmath gd intl opcache
