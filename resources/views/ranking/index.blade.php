@@ -37,7 +37,8 @@
                 {{-- 圖片 --}}
                 <div class="relative md:w-2/5 h-64 md:h-auto overflow-hidden bg-slate-100 shrink-0">
                     @if(!empty($place['photo']))
-                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover">
+                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover"
+                             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&q=75';this.classList.add('opacity-70')">
                     @else
                         <img src="https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&q=75" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover opacity-70">
                     @endif
@@ -80,7 +81,8 @@
             <div class="rank-card bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 flex flex-col" data-aos="fade-up" data-aos-delay="{{ ($index - 1) * 100 }}">
                 <div class="relative h-52 overflow-hidden bg-slate-100">
                     @if(!empty($place['photo']))
-                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover">
+                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover"
+                             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-{{ $index === 1 ? '1476514525535-07fb3b4ae5f1' : '1500534314209-a25ddb2bd429' }}?w=600&q=75';this.classList.add('opacity-70')">
                     @else
                         <img src="https://images.unsplash.com/photo-{{ $index === 1 ? '1476514525535-07fb3b4ae5f1' : '1500534314209-a25ddb2bd429' }}?w=600&q=75" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover opacity-70">
                     @endif
@@ -122,13 +124,15 @@
             <div class="rank-card bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 flex flex-col"
                  data-aos="fade-up" data-aos-delay="{{ (($index - 3) % 3) * 80 }}">
                 <div class="relative h-40 overflow-hidden bg-slate-100">
+                    @php
+                        $fb = ['1528360983277-13d401cdc186','1566438480900-0609be27a4be','1476514525535-07fb3b4ae5f1','1500534314209-a25ddb2bd429','1469854523086-cc02fe5d8800','1488085061387-422e29b40080','1507525428034-b723cf961d3e','1537996194471-e657df975ab4','1540959733332-eab4deabeeaf','1490806843957-31f4c9a91c65','1570077188670-e3a8d69ac5ff','1502602898657-3e91760cbb34'];
+                        $fallbackPhoto = 'https://images.unsplash.com/photo-' . $fb[$index % count($fb)] . '?w=400&q=70';
+                    @endphp
                     @if(!empty($place['photo']))
-                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover">
+                        <img src="{{ $place['photo'] }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover"
+                             onerror="this.onerror=null;this.src='{{ $fallbackPhoto }}';this.classList.add('opacity-70')">
                     @else
-                        @php
-                            $fb = ['1528360983277-13d401cdc186','1566438480900-0609be27a4be','1476514525535-07fb3b4ae5f1','1500534314209-a25ddb2bd429','1469854523086-cc02fe5d8800','1488085061387-422e29b40080','1507525428034-b723cf961d3e','1537996194471-e657df975ab4','1540959733332-eab4deabeeaf','1490806843957-31f4c9a91c65','1570077188670-e3a8d69ac5ff','1502602898657-3e91760cbb34'];
-                        @endphp
-                        <img src="https://images.unsplash.com/photo-{{ $fb[$index % count($fb)] }}?w=400&q=70" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover opacity-70">
+                        <img src="{{ $fallbackPhoto }}" alt="{{ $place['name'] }}" class="rank-img w-full h-full object-cover opacity-70">
                     @endif
                     <div class="absolute top-2.5 left-2.5">
                         <span class="bg-slate-700/80 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">#{{ $index + 1 }}</span>

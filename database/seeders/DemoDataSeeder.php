@@ -14,6 +14,12 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
+        // 已有示範資料就跳過，確保每次部署只 seed 一次
+        if (User::where('email', 'user01@demo.com')->exists()) {
+            $this->command?->info('Demo data already seeded, skipping.');
+            return;
+        }
+
         // ── 1. 建立示範使用者 ──────────────────────────────────
         $userData = [
             ['name' => '王小明', 'email' => 'user01@demo.com'],

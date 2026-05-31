@@ -14,6 +14,9 @@ php artisan storage:link --force 2>/dev/null || true
 # 執行資料庫遷移
 php artisan migrate --force
 
+# 植入示範資料（含 idempotency 檢查，重複執行不會建立重複資料）
+php artisan db:seed --class=DemoDataSeeder --force
+
 # 清除並重建快取
 php artisan config:cache
 php artisan route:cache
