@@ -16,10 +16,11 @@
 
     <style>
         body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif; }
-        #map { height: 100vh; width: 100%; }
+        #map { height: 100%; width: 100%; }
         body, html { height: 100%; margin: 0; padding: 0; overflow: hidden; }
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .mobile-scroll-panel { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         #search-results-panel { max-height: 0; transition: max-height 0.3s ease-out; }
         #search-results-panel.active { max-height: 400px; }
         .move-btn { opacity: 0.4; transition: opacity 0.2s; }
@@ -106,7 +107,7 @@
                 </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar bg-slate-50/50">
+            <div class="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar mobile-scroll-panel bg-slate-50/50">
                 
                 <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="day-tabs-container"></div>
 

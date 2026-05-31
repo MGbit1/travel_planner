@@ -169,25 +169,57 @@ class MapController extends Controller
             'parts' => [['text' => "使用者最新需求：「{$userPrompt}」\n\n【⚠️ 系統強制規則（請務必遵守）】：\n{$systemRules}"]]
         ];
 
-       try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
-    
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->withoutVerifying()
-                ->timeout(120) 
-                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
-                ->post($url, ['contents' => $contents]);
-    
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
+        $maxRetries = 3;
+        $response = null;
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(120)
+                    ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                    ->post($url, ['contents' => $contents]);
+
+                if ($response->status() === 503) {
+                    \Log::warning("Gemini API 503（第 {$attempt} 次）", [
+                        'user_id' => auth()->id(),
+                        'attempt' => $attempt,
+                        'body'    => $response->body(),
+                    ]);
+                    if ($attempt < $maxRetries) {
+                        sleep(2);
+                        continue;
+                    }
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'AI 服務目前流量較高，請稍後再試。',
+                    ], 503);
+                }
+
+                break;
+
+            } catch (\Exception $e) {
+                if ($attempt === $maxRetries) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => '【本機系統崩潰】：' . $e->getMessage(),
+                    ], 500);
+                }
+                sleep(2);
+            }
+        }
+
+        try {
             if (!$response->successful()) {
                 return response()->json([
-                    'status' => 'error', 
-                    'message' => '【Google 拒絕連線】：' . $response->body()
+                    'status'  => 'error',
+                    'message' => '【Google 拒絕連線】：' . $response->body(),
                 ], $response->status());
             }
-            
+
             $resData = $response->json();
 
-            // 驗證 Gemini 回應結構是否完整
             if (!isset($resData['candidates'][0]['content']['parts'][0]['text'])) {
                 \Log::error('Gemini API 回應結構異常', ['response' => $resData]);
                 return response()->json([
@@ -209,16 +241,16 @@ class MapController extends Controller
             }
 
             return response()->json([
-                'status'       => 'success',
-                'ai_message'   => $result['ai_message']   ?? '規劃完成！',
-                'travel_mode'  => $result['travel_mode']  ?? 'DRIVING',
-                'days'         => $result['days']         ?? [],
+                'status'      => 'success',
+                'ai_message'  => $result['ai_message']  ?? '規劃完成！',
+                'travel_mode' => $result['travel_mode'] ?? 'DRIVING',
+                'days'        => $result['days']        ?? [],
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error', 
-                'message' => '【本機系統崩潰】：' . $e->getMessage()
+                'status'  => 'error',
+                'message' => '【本機系統崩潰】：' . $e->getMessage(),
             ], 500);
         }
     }
