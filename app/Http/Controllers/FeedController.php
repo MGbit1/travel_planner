@@ -9,15 +9,48 @@ use App\Models\Trip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class FeedController extends Controller
 {
-    // 1. 顯示動態牆首頁
-    public function index()
+    // 1. 顯示動態牆首頁（支援篩選/搜尋/排序）
+    public function index(Request $request)
     {
-        // 抓取所有貼文，並附帶作者、行程、留言數、按讚數，依照最新時間排序
-        $posts = Post::with(['user', 'trip'])->withCount(['comments', 'likes'])->latest()->paginate(15);
-        
+        $query = Post::with(['user', 'trip'])->withCount(['comments', 'likes']);
+
+        $query->when($request->filled('keyword'), function ($q) use ($request) {
+            $kw = $request->keyword;
+            $q->where(function ($sub) use ($kw) {
+                $sub->where('title', 'like', "%{$kw}%")
+                    ->orWhere('content', 'like', "%{$kw}%");
+            });
+        });
+
+        $query->when($request->filled('days'), function ($q) use ($request) {
+            $days = $request->days;
+            if ($days === '3+') {
+                $q->where('days_count', '>=', 3);
+            } else {
+                $q->where('days_count', (int) $days);
+            }
+        });
+
+        $query->when($request->filled('city'), function ($q) use ($request) {
+            $city = $request->city;
+            $q->where(function ($sub) use ($city) {
+                $sub->where('title', 'like', "%{$city}%")
+                    ->orWhere('content', 'like', "%{$city}%");
+            });
+        });
+
+        match ($request->input('sort', 'latest')) {
+            'likes'  => $query->orderByDesc('likes_count'),
+            'views'  => $query->orderByDesc('views_count'),
+            default  => $query->latest(),
+        };
+
+        $posts = $query->paginate(12)->withQueryString();
+
         return view('feed.index', compact('posts'));
     }
 
@@ -144,7 +177,29 @@ class FeedController extends Controller
         return back()->with('success', '🗑️ 留言已刪除。');
     }
 
-    // 7. 按讚 / 取消按讚 (API 呼叫用)
+    // 7. 複製他人行程到自己的 Dashboard
+    public function copy(Post $post)
+    {
+        if (!$post->trip_id) {
+            return back()->with('error', '此行程已被刪除，無法複製。');
+        }
+
+        $original = Trip::find($post->trip_id);
+        if (!$original) {
+            return back()->with('error', '此行程已被刪除，無法複製。');
+        }
+
+        Trip::create([
+            'user_id'        => Auth::id(),
+            'title'          => '複製自：' . $original->title,
+            'itinerary_data' => $original->itinerary_data,
+            'chat_history'   => [],
+        ]);
+
+        return redirect()->route('dashboard')->with('success', '行程複製成功！已加入您的行程庫，可直接載入編輯。');
+    }
+
+    // 8. 按讚 / 取消按讚 (API 呼叫用)
     public function toggleLike(Post $post)
     {
         $userId = Auth::id();

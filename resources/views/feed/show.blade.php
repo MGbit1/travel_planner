@@ -135,6 +135,17 @@
                 <i class="bi bi-map-fill"></i> 載入此行程
             </a>
             @endif
+            @auth
+            @if($post->trip_id)
+            <form action="{{ route('posts.copy', $post->id) }}" method="POST">
+                @csrf
+                <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2 rounded-xl text-xs transition border border-emerald-200">
+                    <i class="bi bi-copy"></i> 複製行程
+                </button>
+            </form>
+            @endif
+            @endauth
             @if(Auth::id() === $post->user_id)
             <form action="{{ route('feed.destroy', $post->id) }}" method="POST"
                   onsubmit="return confirm('確定要刪除這篇貼文嗎？此動作無法復原！')">
@@ -234,11 +245,22 @@
 
         @if($post->trip_id)
         <div class="px-6 md:px-8 py-6 bg-slate-50 border-t border-slate-100 text-center">
-            <a href="/map?trip_id={{ $post->trip_id }}"
-               class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold shadow-sm transition text-sm hover:-translate-y-0.5 hover:shadow-md">
-                <i class="bi bi-map"></i> 將此行程載入我的地圖
-            </a>
-            <p class="text-[11px] text-slate-400 mt-2">載入後可自由修改並存為你的版本</p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="/map?trip_id={{ $post->trip_id }}"
+                   class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-bold shadow-sm transition text-sm hover:-translate-y-0.5 hover:shadow-md">
+                    <i class="bi bi-map"></i> 將此行程載入我的地圖
+                </a>
+                @auth
+                <form action="{{ route('posts.copy', $post->id) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 hover:border-emerald-400 px-8 py-3 rounded-xl font-bold shadow-sm transition text-sm hover:-translate-y-0.5">
+                        <i class="bi bi-copy"></i> 一鍵複製到我的行程庫
+                    </button>
+                </form>
+                @endauth
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2">複製後可在行程庫獨立編輯，不影響原作者</p>
         </div>
         @endif
     </div>

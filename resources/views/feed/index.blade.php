@@ -21,11 +21,54 @@
             </div>
         @endif
 
+        {{-- 篩選列 --}}
+        <form method="GET" action="{{ route('feed.index') }}" x-data x-ref="filterForm"
+              class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+            {{-- 關鍵字 --}}
+            <div class="relative">
+                <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                <input type="text" name="keyword" value="{{ request('keyword') }}"
+                    placeholder="搜尋標題或內容..."
+                    @input.debounce.600ms="$refs.filterForm.submit()"
+                    class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition">
+            </div>
+
+            {{-- 城市 --}}
+            <div class="relative">
+                <i class="bi bi-geo-alt absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                <input type="text" name="city" value="{{ request('city') }}"
+                    placeholder="輸入城市（如：台北）"
+                    @input.debounce.600ms="$refs.filterForm.submit()"
+                    class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition">
+            </div>
+
+            {{-- 天數 --}}
+            <select name="days" @change="$refs.filterForm.submit()"
+                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition appearance-none cursor-pointer">
+                <option value="">全部天數</option>
+                <option value="1" {{ request('days') === '1' ? 'selected' : '' }}>1 天</option>
+                <option value="2" {{ request('days') === '2' ? 'selected' : '' }}>2 天</option>
+                <option value="3+" {{ request('days') === '3+' ? 'selected' : '' }}>3 天以上</option>
+            </select>
+
+            {{-- 排序 --}}
+            <select name="sort" @change="$refs.filterForm.submit()"
+                class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition appearance-none cursor-pointer">
+                <option value="latest" {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}>最新發佈</option>
+                <option value="likes"  {{ request('sort') === 'likes'  ? 'selected' : '' }}>最多按讚</option>
+                <option value="views"  {{ request('sort') === 'views'  ? 'selected' : '' }}>最多瀏覽</option>
+            </select>
+        </form>
+
         {{-- 工具列 --}}
-        <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center justify-between mb-6">
             <p class="text-slate-500 text-sm font-medium">
                 @if($posts && $posts->total() > 0)
                     共 {{ $posts->total() }} 篇旅遊分享
+                    @if(request('keyword') || request('city') || request('days') || request('sort') !== null && request('sort') !== 'latest')
+                        <a href="{{ route('feed.index') }}" class="ml-2 text-indigo-500 hover:text-indigo-700 text-xs font-semibold underline">清除篩選</a>
+                    @endif
                 @endif
             </p>
             @auth

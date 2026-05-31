@@ -247,6 +247,11 @@
         const loadedTripTitle = @json($loadedTrip?->title);
         const loadedTripChatHistory = @json($loadedTrip?->chat_history);
 
+        // 收藏清單：place_name -> wishlist_id
+        const _wishlistSeed = @json($wishlistItems ?? []);
+        let wishlistMap = {};
+        _wishlistSeed.forEach(w => { wishlistMap[w.place_name] = w.id; });
+
         let map, service, geocoder, directionsService, trafficLayer;
         let itineraryData = { 1: [] };
         let currentDay = 1;
@@ -1017,6 +1022,36 @@
 
         function toggleLock(index) { const currentItinerary = itineraryData[currentDay]; if (!currentItinerary || !currentItinerary[index]) return; currentItinerary[index].isLocked = !currentItinerary[index].isLocked; updateUI(); if (routeLines.length > 0) calculateRoute(); }
 
+        async function toggleWishlist(btn, placeName, lat, lng, address, rating, imageUrl) {
+            const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            const existingId = wishlistMap[placeName];
+
+            try {
+                if (existingId) {
+                    await fetch(`/wishlist/${existingId}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }
+                    });
+                    delete wishlistMap[placeName];
+                } else {
+                    const res = await fetch('/wishlist', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        body: JSON.stringify({ place_name: placeName, latitude: lat, longitude: lng, address, rating, image_url: imageUrl })
+                    });
+                    const data = await res.json();
+                    wishlistMap[placeName] = data.id;
+                }
+            } catch(e) { console.error('收藏操作失敗', e); return; }
+
+            // 更新按鈕外觀（不觸發 updateUI 避免整個 list 重繪）
+            const isNowWishlisted = !!wishlistMap[placeName];
+            const icon = btn.querySelector('i');
+            icon.className = `bi ${isNowWishlisted ? 'bi-bookmark-fill' : 'bi-bookmark'} text-[12px]`;
+            btn.className = btn.className.replace(/text-rose-500|text-slate-400/g, isNowWishlisted ? 'text-rose-500' : 'text-slate-400');
+            btn.title = isNowWishlisted ? '移除收藏' : '加入收藏';
+        }
+
         function updateUI() {
             sessionStorage.setItem('trip_itinerary_memory', JSON.stringify(itineraryData));
             const currentItinerary = itineraryData[currentDay] || []; 
@@ -1085,6 +1120,11 @@
                                 <button onclick="moveItem(${i}, 1)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-200 ${i === currentItinerary.length-1 ? 'invisible' : ''}"><i class="bi bi-chevron-down text-[10px]"></i></button>
                             </div>
                             <div class="flex gap-1 mt-1">
+                                ${isLoggedIn ? `<button onclick="toggleWishlist(this, ${JSON.stringify(p.name)}, ${p.location.lat()}, ${p.location.lng()}, ${JSON.stringify(p.address || '')}, ${p.rating || 0}, ${JSON.stringify(p.photo || '')})"
+                                    class="p-1.5 rounded-md hover:bg-rose-50 transition ${wishlistMap[p.name] ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'}"
+                                    title="${wishlistMap[p.name] ? '移除收藏' : '加入收藏'}">
+                                    <i class="bi ${wishlistMap[p.name] ? 'bi-bookmark-fill' : 'bi-bookmark'} text-[12px]"></i>
+                                </button>` : ''}
                                 <button onclick="toggleLock(${i})" class="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-red-50"><i class="bi ${p.isLocked ? 'bi-unlock' : 'bi-lock'} text-[12px]"></i></button>
                                 <button onclick="editNote(${p.id})" class="p-1.5 text-slate-400 hover:text-indigo-500 rounded-md hover:bg-indigo-50"><i class="bi bi-pencil-square text-[12px]"></i></button>
                                 <button onclick="removeItem(${p.id})" class="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-red-50"><i class="bi bi-trash3 text-[12px]"></i></button>
