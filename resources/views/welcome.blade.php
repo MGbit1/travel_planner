@@ -1320,6 +1320,7 @@
             function sh(s) { return typeof SNAP[s] === 'function' ? SNAP[s]() : SNAP[s]; }
 
             function applyHeight(px, animate) {
+                if (window.innerWidth >= 768) return;
                 const vh = window.innerHeight;
                 px = Math.max(SNAP.collapsed, Math.min(px, sh('expanded')));
                 const t = animate ? 'height .28s cubic-bezier(.32,.72,0,1)' : 'none';
