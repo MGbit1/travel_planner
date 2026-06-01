@@ -14,11 +14,9 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // 已有示範資料就跳過，確保每次部署只 seed 一次
-        if (User::where('email', 'user01@demo.com')->exists()) {
-            $this->command?->info('Demo data already seeded, skipping.');
-            return;
-        }
+        // 先刪除舊示範資料，確保每次部署圖片/內容都是最新版本
+        $demoEmails = array_map(fn($i) => sprintf('user%02d@demo.com', $i), range(1, 10));
+        User::whereIn('email', $demoEmails)->delete();
 
         // ── 1. 建立示範使用者 ──────────────────────────────────
         $userData = [
@@ -36,10 +34,11 @@ class DemoDataSeeder extends Seeder
 
         $users = collect();
         foreach ($userData as $u) {
-            $users->push(User::firstOrCreate(
-                ['email' => $u['email']],
-                ['name' => $u['name'], 'password' => Hash::make('password123')]
-            ));
+            $users->push(User::create([
+                'name'     => $u['name'],
+                'email'    => $u['email'],
+                'password' => Hash::make('password123'),
+            ]));
         }
 
         // ── 2. 行程資料（真實台灣景點 + 正確座標）──────────────
@@ -49,14 +48,14 @@ class DemoDataSeeder extends Seeder
                 'title' => '台北三日文青之旅',
                 'data'  => [
                     1 => [
-                        ['name' => '國立故宮博物院',   'lat' => 25.1022, 'lng' => 121.5485, 'address' => '台北市士林區至善路二段221號', 'stay_time' => '3小時', 'cost_estimate' => '$350', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1599706398924-0be3dd41c4ce?w=400&q=80'],
-                        ['name' => '士林夜市',         'lat' => 25.0879, 'lng' => 121.5240, 'address' => '台北市士林區基河路101號',   'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
-                        ['name' => '淡水老街',         'lat' => 25.1706, 'lng' => 121.4382, 'address' => '新北市淡水區中正路',         'stay_time' => '2小時', 'cost_estimate' => '$200', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1633283522688-17cddf2e7e6a?w=400&q=80'],
+                        ['name' => '國立故宮博物院',   'lat' => 25.1022, 'lng' => 121.5485, 'address' => '台北市士林區至善路二段221號', 'stay_time' => '3小時', 'cost_estimate' => '$350', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80'],
+                        ['name' => '士林夜市',         'lat' => 25.0879, 'lng' => 121.5240, 'address' => '台北市士林區基河路101號',   'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
+                        ['name' => '淡水老街',         'lat' => 25.1706, 'lng' => 121.4382, 'address' => '新北市淡水區中正路',         'stay_time' => '2小時', 'cost_estimate' => '$200', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&q=80'],
                     ],
                     2 => [
                         ['name' => '象山步道',         'lat' => 25.0270, 'lng' => 121.5768, 'address' => '台北市信義區信義路五段150巷',  'stay_time' => '2小時', 'cost_estimate' => '$0',   'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1598935898639-81586f7d2129?w=400&q=80'],
                         ['name' => '台北101',          'lat' => 25.0338, 'lng' => 121.5645, 'address' => '台北市信義區信義路五段7號',   'stay_time' => '2小時', 'cost_estimate' => '$600', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1470173274384-c4e8e2f9ea7c?w=400&q=80'],
-                        ['name' => '饒河夜市',         'lat' => 25.0506, 'lng' => 121.5776, 'address' => '台北市松山區八德路四段775號', 'stay_time' => '1.5小時', 'cost_estimate' => '$250', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
+                        ['name' => '饒河夜市',         'lat' => 25.0506, 'lng' => 121.5776, 'address' => '台北市松山區八德路四段775號', 'stay_time' => '1.5小時', 'cost_estimate' => '$250', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
                     ],
                     3 => [
                         ['name' => '九份老街',         'lat' => 25.1093, 'lng' => 121.8438, 'address' => '新北市瑞芳區基山街',         'stay_time' => '3小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1512361436605-a484bdb34b5f?w=400&q=80'],
@@ -69,12 +68,12 @@ class DemoDataSeeder extends Seeder
                 'title' => '台中美食輕旅行',
                 'data'  => [
                     1 => [
-                        ['name' => '彩虹眷村',         'lat' => 24.1285, 'lng' => 120.6426, 'address' => '台中市南屯區春安路56巷',     'stay_time' => '1小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&q=80'],
-                        ['name' => '逢甲夜市',         'lat' => 24.1797, 'lng' => 120.6441, 'address' => '台中市西屯區文華路',         'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
-                        ['name' => '宮原眼科',         'lat' => 24.1403, 'lng' => 120.6817, 'address' => '台中市中區中山路20號',       'stay_time' => '1小時', 'cost_estimate' => '$200', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1548366086-7f1b76106622?w=400&q=80'],
+                        ['name' => '彩虹眷村',         'lat' => 24.1285, 'lng' => 120.6426, 'address' => '台中市南屯區春安路56巷',     'stay_time' => '1小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1566438480900-0609be27a4be?w=400&q=80'],
+                        ['name' => '逢甲夜市',         'lat' => 24.1797, 'lng' => 120.6441, 'address' => '台中市西屯區文華路',         'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
+                        ['name' => '宮原眼科',         'lat' => 24.1403, 'lng' => 120.6817, 'address' => '台中市中區中山路20號',       'stay_time' => '1小時', 'cost_estimate' => '$200', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80'],
                     ],
                     2 => [
-                        ['name' => '日月潭',           'lat' => 23.8609, 'lng' => 120.9119, 'address' => '南投縣魚池鄉中山路599號',   'stay_time' => '4小時', 'cost_estimate' => '$300', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1604608672516-5b0f9c5b6d5f?w=400&q=80'],
+                        ['name' => '日月潭',           'lat' => 23.8609, 'lng' => 120.9119, 'address' => '南投縣魚池鄉中山路599號',   'stay_time' => '4小時', 'cost_estimate' => '$300', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80'],
                         ['name' => '清境農場',         'lat' => 24.0833, 'lng' => 121.1667, 'address' => '南投縣仁愛鄉定遠新村170號', 'stay_time' => '3小時', 'cost_estimate' => '$500', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80'],
                     ],
                 ],
@@ -84,12 +83,12 @@ class DemoDataSeeder extends Seeder
                 'title' => '高雄港都悠閒兩日遊',
                 'data'  => [
                     1 => [
-                        ['name' => '駁二藝術特區',     'lat' => 22.6213, 'lng' => 120.2767, 'address' => '高雄市鹽埕區大勇路1號',     'stay_time' => '2小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1599706398924-0be3dd41c4ce?w=400&q=80'],
-                        ['name' => '六合夜市',         'lat' => 22.6264, 'lng' => 120.3026, 'address' => '高雄市新興區六合二路',       'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
-                        ['name' => '愛河',             'lat' => 22.6323, 'lng' => 120.2931, 'address' => '高雄市鹽埕區河西路',         'stay_time' => '1.5小時', 'cost_estimate' => '$0',   'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=400&q=80'],
+                        ['name' => '駁二藝術特區',     'lat' => 22.6213, 'lng' => 120.2767, 'address' => '高雄市鹽埕區大勇路1號',     'stay_time' => '2小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80'],
+                        ['name' => '六合夜市',         'lat' => 22.6264, 'lng' => 120.3026, 'address' => '高雄市新興區六合二路',       'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
+                        ['name' => '愛河',             'lat' => 22.6323, 'lng' => 120.2931, 'address' => '高雄市鹽埕區河西路',         'stay_time' => '1.5小時', 'cost_estimate' => '$0',   'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&q=80'],
                     ],
                     2 => [
-                        ['name' => '佛光山',           'lat' => 22.7472, 'lng' => 120.4550, 'address' => '高雄市大樹區興田路153號',   'stay_time' => '3小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1608236415053-8574c8e3faeb?w=400&q=80'],
+                        ['name' => '佛光山',           'lat' => 22.7472, 'lng' => 120.4550, 'address' => '高雄市大樹區興田路153號',   'stay_time' => '3小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=400&q=80'],
                         ['name' => '墾丁大街',         'lat' => 21.9449, 'lng' => 120.7955, 'address' => '屏東縣恆春鎮墾丁路',         'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80'],
                     ],
                 ],
@@ -99,13 +98,13 @@ class DemoDataSeeder extends Seeder
                 'title' => '宜蘭兩天一夜輕旅',
                 'data'  => [
                     1 => [
-                        ['name' => '羅東夜市',         'lat' => 24.6773, 'lng' => 121.7697, 'address' => '宜蘭縣羅東鎮公正路與民生路口', 'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
+                        ['name' => '羅東夜市',         'lat' => 24.6773, 'lng' => 121.7697, 'address' => '宜蘭縣羅東鎮公正路與民生路口', 'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
                         ['name' => '梅花湖',           'lat' => 24.7128, 'lng' => 121.7943, 'address' => '宜蘭縣冬山鄉大埤路150號',   'stay_time' => '2小時', 'cost_estimate' => '$150', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80'],
                         ['name' => '冬山河親水公園',   'lat' => 24.6600, 'lng' => 121.7810, 'address' => '宜蘭縣五結鄉協和路',         'stay_time' => '1.5小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80'],
                     ],
                     2 => [
                         ['name' => '頭城農場',         'lat' => 24.8567, 'lng' => 121.8201, 'address' => '宜蘭縣頭城鎮更新路167號',   'stay_time' => '3小時', 'cost_estimate' => '$500', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80'],
-                        ['name' => '礁溪溫泉',         'lat' => 24.8195, 'lng' => 121.7710, 'address' => '宜蘭縣礁溪鄉德陽路',         'stay_time' => '2小時', 'cost_estimate' => '$400', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400&q=80'],
+                        ['name' => '礁溪溫泉',         'lat' => 24.8195, 'lng' => 121.7710, 'address' => '宜蘭縣礁溪鄉德陽路',         'stay_time' => '2小時', 'cost_estimate' => '$400', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80'],
                     ],
                 ],
             ],
@@ -114,9 +113,9 @@ class DemoDataSeeder extends Seeder
                 'title' => '花蓮太魯閣壯遊記',
                 'data'  => [
                     1 => [
-                        ['name' => '太魯閣國家公園',   'lat' => 24.1569, 'lng' => 121.6214, 'address' => '花蓮縣秀林鄉富世村富世291號', 'stay_time' => '4小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80'],
-                        ['name' => '七星潭',           'lat' => 24.0269, 'lng' => 121.6323, 'address' => '花蓮縣新城鄉七星街',         'stay_time' => '1.5小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80'],
-                        ['name' => '東大門夜市',       'lat' => 23.9790, 'lng' => 121.6044, 'address' => '花蓮市自強夜市',             'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
+                        ['name' => '太魯閣國家公園',   'lat' => 24.1569, 'lng' => 121.6214, 'address' => '花蓮縣秀林鄉富世村富世291號', 'stay_time' => '4小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80'],
+                        ['name' => '七星潭',           'lat' => 24.0269, 'lng' => 121.6323, 'address' => '花蓮縣新城鄉七星街',         'stay_time' => '1.5小時', 'cost_estimate' => '$0',   'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&q=80'],
+                        ['name' => '東大門夜市',       'lat' => 23.9790, 'lng' => 121.6044, 'address' => '花蓮市自強夜市',             'stay_time' => '2小時', 'cost_estimate' => '$300', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
                     ],
                     2 => [
                         ['name' => '鯉魚潭',           'lat' => 23.8917, 'lng' => 121.5544, 'address' => '花蓮縣壽豐鄉魚池村',         'stay_time' => '2小時', 'cost_estimate' => '$100', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80'],
@@ -129,12 +128,12 @@ class DemoDataSeeder extends Seeder
                 'title' => '台南古都美食深度遊',
                 'data'  => [
                     1 => [
-                        ['name' => '赤崁樓',           'lat' => 23.0000, 'lng' => 120.2012, 'address' => '台南市中西區民族路二段212號', 'stay_time' => '1.5小時', 'cost_estimate' => '$100', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=400&q=80'],
-                        ['name' => '安平古堡',         'lat' => 23.0008, 'lng' => 120.1618, 'address' => '台南市安平區國勝路82號',     'stay_time' => '1.5小時', 'cost_estimate' => '$80',  'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=400&q=80'],
-                        ['name' => '花園夜市',         'lat' => 23.0220, 'lng' => 120.2280, 'address' => '台南市北區海安路',           'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'],
+                        ['name' => '赤崁樓',           'lat' => 23.0000, 'lng' => 120.2012, 'address' => '台南市中西區民族路二段212號', 'stay_time' => '1.5小時', 'cost_estimate' => '$100', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&q=80'],
+                        ['name' => '安平古堡',         'lat' => 23.0008, 'lng' => 120.1618, 'address' => '台南市安平區國勝路82號',     'stay_time' => '1.5小時', 'cost_estimate' => '$80',  'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&q=80'],
+                        ['name' => '花園夜市',         'lat' => 23.0220, 'lng' => 120.2280, 'address' => '台南市北區海安路',           'stay_time' => '2小時', 'cost_estimate' => '$350', 'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'],
                     ],
                     2 => [
-                        ['name' => '奇美博物館',       'lat' => 22.9758, 'lng' => 120.2547, 'address' => '台南市仁德區文華路二段66號', 'stay_time' => '3小時', 'cost_estimate' => '$200', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1566159267722-c5cd97ba5940?w=400&q=80'],
+                        ['name' => '奇美博物館',       'lat' => 22.9758, 'lng' => 120.2547, 'address' => '台南市仁德區文華路二段66號', 'stay_time' => '3小時', 'cost_estimate' => '$200', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1490806843957-31f4c9a91c65?w=400&q=80'],
                         ['name' => '四草綠色隧道',     'lat' => 23.0633, 'lng' => 120.1418, 'address' => '台南市安南區大眾路360號',   'stay_time' => '1.5小時', 'cost_estimate' => '$200', 'parking_available' => true,  'photo' => 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80'],
                     ],
                 ],
@@ -146,7 +145,7 @@ class DemoDataSeeder extends Seeder
                     1 => [
                         ['name' => '阿里山國家森林遊樂區', 'lat' => 23.5142, 'lng' => 120.8031, 'address' => '嘉義縣阿里山鄉中正村7號', 'stay_time' => '4小時', 'cost_estimate' => '$300', 'parking_available' => true, 'photo' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80'],
                         ['name' => '祝山觀日台',       'lat' => 23.5081, 'lng' => 120.8126, 'address' => '嘉義縣阿里山鄉祝山',         'stay_time' => '2小時', 'cost_estimate' => '$0',   'parking_available' => false, 'photo' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80'],
-                        ['name' => '奮起湖老街',       'lat' => 23.4862, 'lng' => 120.7217, 'address' => '嘉義縣竹崎鄉中和村',         'stay_time' => '1.5小時', 'cost_estimate' => '$150', 'parking_available' => true, 'photo' => 'https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=400&q=80'],
+                        ['name' => '奮起湖老街',       'lat' => 23.4862, 'lng' => 120.7217, 'address' => '嘉義縣竹崎鄉中和村',         'stay_time' => '1.5小時', 'cost_estimate' => '$150', 'parking_available' => true, 'photo' => 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&q=80'],
                     ],
                 ],
             ],
@@ -235,7 +234,7 @@ class DemoDataSeeder extends Seeder
             $likeCount  = mt_rand(3, 15);
             $shuffled   = $users->shuffle()->take($likeCount);
             foreach ($shuffled as $user) {
-                PostLike::firstOrCreate([
+                PostLike::create([
                     'post_id' => $post->id,
                     'user_id' => $user->id,
                 ]);

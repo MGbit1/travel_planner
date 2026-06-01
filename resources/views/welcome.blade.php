@@ -52,6 +52,13 @@
 
         @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        /* 拖曳面板 */
+        #drag-handle { touch-action: none; -webkit-user-select: none; user-select: none; }
+        #sidebar-panel, #map-wrapper { will-change: height; }
+        @media (max-width: 767px) {
+            #sidebar-panel { overflow: hidden; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
@@ -68,10 +75,16 @@
 
     <div class="flex flex-col md:flex-row h-[100dvh] w-full overflow-hidden bg-slate-100">
         
-        <div class="order-2 md:order-1 w-full h-[55%] md:h-full md:w-[380px] lg:w-[420px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-t md:border-t-0 md:border-r border-slate-200 rounded-t-[2rem] md:rounded-none relative">
+        <div id="sidebar-panel" class="order-2 md:order-1 w-full h-[55%] md:h-full md:w-[380px] lg:w-[420px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-t md:border-t-0 md:border-r border-slate-200 rounded-t-[2rem] md:rounded-none relative">
             
-            <div class="md:hidden flex justify-center pt-3 pb-1 w-full shrink-0">
-                <div class="w-12 h-1.5 bg-slate-200 rounded-full"></div>
+            {{-- 拖曳把手（手機版）--}}
+            <div id="drag-handle" class="md:hidden flex flex-col items-center justify-center pt-3 pb-2.5 w-full shrink-0 cursor-grab active:cursor-grabbing">
+                <div id="drag-bar" class="w-12 h-1.5 rounded-full bg-slate-200 transition-colors duration-200 mb-1.5"></div>
+                <div class="flex items-center gap-2">
+                    <span id="snap-dot-0" class="block w-1.5 h-1.5 rounded-full bg-slate-200 transition-all duration-150"></span>
+                    <span id="snap-dot-1" class="block w-2 h-2 rounded-full bg-slate-500 transition-all duration-150"></span>
+                    <span id="snap-dot-2" class="block w-1.5 h-1.5 rounded-full bg-slate-200 transition-all duration-150"></span>
+                </div>
             </div>
 
             <div class="px-5 py-3.5 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
@@ -221,10 +234,33 @@
             </div>
         </div> 
 
-        <div class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
+        <div id="map-wrapper" class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
             <div id="map" class="w-full h-full"></div>
-            <button onclick="toggleTraffic()" class="absolute top-5 right-5 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
-                <i class="bi bi-stoplights"></i> 即時路況
+
+            {{-- 快速導覽按鈕（地圖左上角，手機圖示、桌機圖示+文字）--}}
+            <div class="absolute top-4 left-4 z-10 flex items-center gap-1.5">
+                <a href="/" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="首頁">
+                    <i class="bi bi-house-fill text-rose-400 text-sm"></i>
+                    <span class="hidden sm:inline">首頁</span>
+                </a>
+                <a href="{{ route('feed.index') }}" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="靈感社群">
+                    <i class="bi bi-compass-fill text-indigo-400 text-sm"></i>
+                    <span class="hidden sm:inline">社群</span>
+                </a>
+                <a href="/ranking" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="熱門榜單">
+                    <i class="bi bi-trophy-fill text-amber-400 text-sm"></i>
+                    <span class="hidden sm:inline">榜單</span>
+                </a>
+                @auth
+                <a href="{{ route('dashboard') }}" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="我的行程">
+                    <i class="bi bi-grid-1x2-fill text-emerald-400 text-sm"></i>
+                    <span class="hidden sm:inline">行程</span>
+                </a>
+                @endauth
+            </div>
+
+            <button onclick="toggleTraffic()" class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
+                <i class="bi bi-stoplights"></i> <span class="hidden sm:inline">即時路況</span>
             </button>
         </div>
     </div> 
@@ -1258,6 +1294,100 @@
         function updateTravelMode(mode) { currentMode = mode; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${mode}`).classList.add('active'); if (itineraryData[currentDay].length >= 2) calculateRoute(); }
         function toggleLeg(idx, checked) { if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); const totalLegs = itineraryData[currentDay].length - 1; const allChecked = visibleLegs.size === totalLegs && totalLegs > 0; document.getElementById('toggle-all-routes').checked = allChecked; updateRouteVisibility(); renderAISuggestions(); }
         function toggleAllRoutes(checked) { document.querySelectorAll('#route-toggle-list input[type="checkbox"]').forEach(cb => cb.checked = checked); if (checked) for(let i=0; i < itineraryData[currentDay].length - 1; i++) visibleLegs.add(i); else visibleLegs.clear(); updateRouteVisibility(); renderAISuggestions(); }
+
+        // ── 可拖曳面板（手機版三段式）────────────────────────────
+        (function initDragHandle() {
+            const panel   = document.getElementById('sidebar-panel');
+            const wrapper = document.getElementById('map-wrapper');
+            const handle  = document.getElementById('drag-handle');
+            const bar     = document.getElementById('drag-bar');
+            const dots    = [0,1,2].map(i => document.getElementById('snap-dot-' + i));
+            if (!handle || !panel || !wrapper) return;
+
+            const SNAP = {
+                collapsed: 64,
+                half:     () => Math.round(window.innerHeight * 0.50),
+                expanded: () => Math.round(window.innerHeight * 0.78),
+            };
+            let snapState = 'half', dragging = false, startY = 0, startH = 0, tapTime = 0;
+
+            function sh(s) { return typeof SNAP[s] === 'function' ? SNAP[s]() : SNAP[s]; }
+
+            function applyHeight(px, animate) {
+                const vh = window.innerHeight;
+                px = Math.max(SNAP.collapsed, Math.min(px, sh('expanded')));
+                const t = animate ? 'height .28s cubic-bezier(.32,.72,0,1)' : 'none';
+                panel.style.transition   = t;
+                wrapper.style.transition = t;
+                panel.style.height   = px + 'px';
+                wrapper.style.height = (vh - px) + 'px';
+                updateDots(px);
+            }
+
+            function updateDots(px) {
+                const col = SNAP.collapsed, half = sh('half'), exp = sh('expanded');
+                const active = px <= (col + half) / 2 ? 0 : px >= (half + exp) / 2 ? 2 : 1;
+                dots.forEach((d, i) => {
+                    if (!d) return;
+                    if (i === active) { d.style.width = '8px'; d.style.height = '8px'; d.style.background = '#475569'; }
+                    else              { d.style.width = '6px'; d.style.height = '6px'; d.style.background = '#cbd5e1'; }
+                });
+                if (bar) bar.style.background = active === 0 ? '#94a3b8' : active === 2 ? '#334155' : '#cbd5e1';
+            }
+
+            function goSnap(s, animate) {
+                snapState = s;
+                applyHeight(sh(s), animate !== false);
+                const delay = animate !== false ? 300 : 0;
+                setTimeout(() => { if (typeof map !== 'undefined' && map) google.maps.event.trigger(map, 'resize'); }, delay);
+            }
+
+            function onStart(e) {
+                if (window.innerWidth >= 768) return;
+                dragging = true; tapTime = Date.now();
+                startY = e.touches ? e.touches[0].clientY : e.clientY;
+                startH = panel.getBoundingClientRect().height;
+                panel.style.transition = wrapper.style.transition = 'none';
+                e.preventDefault();
+            }
+            function onMove(e) {
+                if (!dragging) return;
+                const y = e.touches ? e.touches[0].clientY : e.clientY;
+                applyHeight(startH + (startY - y), false);
+                e.preventDefault();
+            }
+            function onEnd() {
+                if (!dragging) return;
+                dragging = false;
+                const px = panel.getBoundingClientRect().height;
+                const wasTap = Date.now() - tapTime < 220 && Math.abs(px - startH) < 10;
+                if (wasTap) {
+                    const order = ['collapsed','half','expanded'];
+                    goSnap(order[(order.indexOf(snapState) + 1) % order.length]);
+                } else {
+                    const col = SNAP.collapsed, half = sh('half'), exp = sh('expanded');
+                    goSnap(px < (col + half) / 2 ? 'collapsed' : px > (half + exp) / 2 ? 'expanded' : 'half');
+                }
+            }
+
+            handle.addEventListener('mousedown',  onStart);
+            handle.addEventListener('touchstart', onStart, { passive: false });
+            document.addEventListener('mousemove',  onMove);
+            document.addEventListener('touchmove',  onMove, { passive: false });
+            document.addEventListener('mouseup',  onEnd);
+            document.addEventListener('touchend', onEnd);
+
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 768) {
+                    panel.style.height = wrapper.style.height = '';
+                    panel.style.transition = wrapper.style.transition = '';
+                } else {
+                    applyHeight(sh(snapState), false);
+                }
+            });
+
+            goSnap('half', false);
+        })();
         function updateRouteToggleUI() { const currentItinerary = itineraryData[currentDay]; const list = document.getElementById('route-toggle-list'); list.innerHTML = ''; for(let i=0; i < currentItinerary.length - 1; i++) { list.innerHTML += `<label class="flex items-center gap-2 cursor-pointer bg-slate-50 p-2 rounded-lg border border-slate-100 hover:bg-slate-100 transition"><input type="checkbox" checked onchange="toggleLeg(${i}, this.checked)" class="cursor-pointer accent-slate-800 rounded-sm"><span class="font-medium truncate" style="color:${colorPalette[i % colorPalette.length]}">段落 ${i+1}➔${i+2}</span></label>`; } }
         function updateRouteVisibility() { routeLines.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); routeLabels.forEach(l => l.setMap(visibleLegs.has(l.legIndex) ? map : null)); }
         window.onload = initMap;

@@ -87,7 +87,9 @@
 
                         <div class="relative h-48 bg-slate-100 overflow-hidden">
                             @if($post->image_url)
-                                <img src="{{ $post->image_url }}" alt="{{ $post->title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                <img src="{{ $post->image_url }}" alt="{{ $post->title }}"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                     onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=70'">
                             @else
                                 <div class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-indigo-50 group-hover:to-slate-100 transition-colors duration-500">
                                     <i class="bi bi-images text-3xl text-slate-300 mb-2"></i>

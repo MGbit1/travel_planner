@@ -49,14 +49,17 @@
         {{-- 多張照片：左大右雙格拼貼 --}}
         <div class="absolute inset-0 grid grid-cols-2 gap-1">
             <div class="overflow-hidden">
-                <img src="{{ $allPhotos[0] }}" class="w-full h-full object-cover" alt="">
+                <img src="{{ $allPhotos[0] }}" class="w-full h-full object-cover" alt=""
+                     onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=70'">
             </div>
             <div class="grid grid-rows-2 gap-1">
                 <div class="overflow-hidden">
-                    <img src="{{ $allPhotos[1] }}" class="w-full h-full object-cover" alt="">
+                    <img src="{{ $allPhotos[1] }}" class="w-full h-full object-cover" alt=""
+                         onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=70'">
                 </div>
                 <div class="overflow-hidden relative">
-                    <img src="{{ $allPhotos[2] }}" class="w-full h-full object-cover" alt="">
+                    <img src="{{ $allPhotos[2] }}" class="w-full h-full object-cover" alt=""
+                         onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1488085061387-422e29b40080?w=600&q=70'">
                     @if(count($allPhotos) > 3)
                         <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
                             <span class="text-white font-extrabold text-2xl">+{{ count($allPhotos) - 3 }}</span>
@@ -66,7 +69,8 @@
             </div>
         </div>
     @elseif($coverPhoto)
-        <img src="{{ $coverPhoto }}" class="absolute inset-0 w-full h-full object-cover" alt="">
+        <img src="{{ $coverPhoto }}" class="absolute inset-0 w-full h-full object-cover" alt=""
+             onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=70'">
     @else
         <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-indigo-900 flex items-center justify-center">
             <i class="bi bi-images text-6xl text-white/20"></i>
