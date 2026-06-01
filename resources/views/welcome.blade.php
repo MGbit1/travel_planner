@@ -78,7 +78,7 @@
         <div id="sidebar-panel" class="order-2 md:order-1 w-full h-[55%] md:h-full md:w-[380px] lg:w-[420px] bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.08)] md:shadow-[4px_0_24px_rgba(0,0,0,0.04)] z-20 flex flex-col flex-shrink-0 border-t md:border-t-0 md:border-r border-slate-200 rounded-t-[2rem] md:rounded-none relative">
             
             {{-- 拖曳把手（手機版）--}}
-            <div id="drag-handle" class="md:hidden flex flex-col items-center justify-center pt-3 pb-2.5 w-full shrink-0 cursor-grab active:cursor-grabbing">
+            <div id="drag-handle" class="md:hidden flex flex-col items-center justify-center pt-3 pb-2 w-full shrink-0 cursor-grab active:cursor-grabbing">
                 <div id="drag-bar" class="w-12 h-1.5 rounded-full bg-slate-200 transition-colors duration-200 mb-1.5"></div>
                 <div class="flex items-center gap-2">
                     <span id="snap-dot-0" class="block w-1.5 h-1.5 rounded-full bg-slate-200 transition-all duration-150"></span>
@@ -87,21 +87,49 @@
                 </div>
             </div>
 
-            <div class="px-5 py-3.5 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+            {{-- 快速導覽（手機版，放在面板內不擋地圖）--}}
+            <div class="md:hidden flex items-stretch border-b border-slate-100 bg-white shrink-0">
+                <a href="/" class="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 hover:bg-rose-50 active:bg-rose-100 transition border-r border-slate-100">
+                    <i class="bi bi-house-fill text-rose-400 text-base"></i>
+                    <span class="text-[9px] font-bold text-slate-500">首頁</span>
+                </a>
+                <a href="{{ route('feed.index') }}" class="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 hover:bg-indigo-50 active:bg-indigo-100 transition border-r border-slate-100">
+                    <i class="bi bi-compass-fill text-indigo-400 text-base"></i>
+                    <span class="text-[9px] font-bold text-slate-500">社群</span>
+                </a>
+                <a href="/ranking" class="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 hover:bg-amber-50 active:bg-amber-100 transition border-r border-slate-100">
+                    <i class="bi bi-trophy-fill text-amber-400 text-base"></i>
+                    <span class="text-[9px] font-bold text-slate-500">榜單</span>
+                </a>
+                @auth
+                <a href="{{ route('dashboard') }}" class="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 hover:bg-emerald-50 active:bg-emerald-100 transition">
+                    <i class="bi bi-grid-1x2-fill text-emerald-400 text-base"></i>
+                    <span class="text-[9px] font-bold text-slate-500">行程</span>
+                </a>
+                @endauth
+                @guest
+                <a href="{{ route('login') }}" class="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 hover:bg-slate-50 active:bg-slate-100 transition">
+                    <i class="bi bi-person-circle text-slate-400 text-base"></i>
+                    <span class="text-[9px] font-bold text-slate-500">登入</span>
+                </a>
+                @endguest
+            </div>
+
+            <div class="px-4 py-3 bg-white flex justify-between items-center border-b border-slate-100 sticky top-0 z-30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
                 <a href="/" class="block hover:opacity-80 transition">
                     <h1 class="text-lg font-extrabold tracking-tight text-slate-800">TripFlow<span class="text-indigo-600">.</span></h1>
                     <p class="text-slate-400 text-[9px] font-bold tracking-[0.2em] mt-0.5 uppercase">地圖規劃</p>
                 </a>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 min-w-0">
                     @if (Route::has('login'))
                         @auth
-                            <div class="hidden sm:flex items-center text-[11px] font-semibold text-slate-400 gap-3 pr-3 border-r border-slate-200">
+                            <div class="hidden md:flex items-center text-[10px] font-semibold text-slate-400 gap-2 pr-2 border-r border-slate-200 shrink-0">
                                 <a href="{{ route('feed.index') }}" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-compass"></i> 社群</a>
                                 <a href="/ranking" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-trophy"></i> 榜單</a>
                                 <a href="{{ route('dashboard') }}" class="hover:text-slate-700 transition flex items-center gap-1"><i class="bi bi-grid-1x2"></i> 行程</a>
                             </div>
-                            <span class="hidden sm:block text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
+                            <span class="hidden lg:block text-[10px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full shrink-0 truncate max-w-[90px]">
                                 <i class="bi bi-person-circle text-indigo-400"></i> {{ Auth::user()->name }}
                             </span>
                         @else
@@ -114,7 +142,7 @@
                         @endauth
                     @endif
 
-                    <button onclick="saveFullTrip()" class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow-sm transition flex items-center gap-1.5">
+                    <button onclick="saveFullTrip()" class="shrink-0 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-sm transition flex items-center gap-1.5">
                         <i class="bi bi-cloud-arrow-up-fill"></i> 儲存行程
                     </button>
                 </div>
@@ -236,28 +264,6 @@
 
         <div id="map-wrapper" class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
             <div id="map" class="w-full h-full"></div>
-
-            {{-- 快速導覽按鈕（地圖左上角，手機圖示、桌機圖示+文字）--}}
-            <div class="absolute top-4 left-4 z-10 flex items-center gap-1.5">
-                <a href="/" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="首頁">
-                    <i class="bi bi-house-fill text-rose-400 text-sm"></i>
-                    <span class="hidden sm:inline">首頁</span>
-                </a>
-                <a href="{{ route('feed.index') }}" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="靈感社群">
-                    <i class="bi bi-compass-fill text-indigo-400 text-sm"></i>
-                    <span class="hidden sm:inline">社群</span>
-                </a>
-                <a href="/ranking" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="熱門榜單">
-                    <i class="bi bi-trophy-fill text-amber-400 text-sm"></i>
-                    <span class="hidden sm:inline">榜單</span>
-                </a>
-                @auth
-                <a href="{{ route('dashboard') }}" class="bg-white/95 backdrop-blur-sm px-2.5 py-2 sm:px-3 rounded-xl shadow-sm border border-slate-200 hover:bg-white hover:shadow-md transition flex items-center gap-1.5 text-[12px] font-semibold text-slate-700" title="我的行程">
-                    <i class="bi bi-grid-1x2-fill text-emerald-400 text-sm"></i>
-                    <span class="hidden sm:inline">行程</span>
-                </a>
-                @endauth
-            </div>
 
             <button onclick="toggleTraffic()" class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
                 <i class="bi bi-stoplights"></i> <span class="hidden sm:inline">即時路況</span>
