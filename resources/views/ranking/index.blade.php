@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <div class="max-w-6xl mx-auto px-6 lg:px-8 -mt-10 pb-24">
+    <div class="max-w-6xl mx-auto px-6 lg:px-8 -mt-10 pb-24 relative z-10">
 
         @forelse ($topPlaces as $index => $place)
 
