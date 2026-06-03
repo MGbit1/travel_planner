@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Trip;
+use App\Services\PlaceStatisticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,7 +18,7 @@ class TripController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'itinerary_data' => 'required|array', 
-            'chat_history' => 'nullable|array', // 💡 手術刀第一刀：允許接收前端傳來的聊天記憶
+            'chat_history' => 'nullable|array|max:100',
         ]);
 
         $trip = Trip::create([
@@ -27,6 +28,8 @@ class TripController extends Controller
             'chat_history' => $validated['chat_history'] ?? null, // 💡 手術刀第二刀：把記憶存進資料庫
         ]);
 
+        app(PlaceStatisticsService::class)->clearCache();
+
         return response()->json([
             'status' => 'success',
             'id' => $trip->id,
@@ -34,15 +37,15 @@ class TripController extends Controller
         ]);
     }
 
-    // 💡 新增這段：刪除行程功能
     public function destroy(Trip $trip)
     {
-        // 防駭客：確定這個行程真的是目前登入者的
         if ($trip->user_id !== Auth::id()) {
             abort(403, '無權限刪除此行程');
         }
 
         $trip->delete();
+
+        app(PlaceStatisticsService::class)->clearCache();
 
         return back()->with('success', '行程已成功刪除！');
     }

@@ -19,24 +19,19 @@ class WishlistController extends Controller
             'image_url'  => 'nullable|string|max:1000',
         ]);
 
-        $existing = Wishlist::where('user_id', Auth::id())
-            ->where('place_name', $validated['place_name'])
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'status'  => 'already_exists',
-                'id'      => $existing->id,
-                'message' => '已在收藏清單中',
-            ]);
-        }
-
-        $wishlist = Wishlist::create(array_merge($validated, ['user_id' => Auth::id()]));
+        [$wishlist, $created] = [
+            Wishlist::firstOrCreate(
+                ['user_id' => Auth::id(), 'place_name' => $validated['place_name']],
+                array_merge($validated, ['user_id' => Auth::id()])
+            ),
+            false,
+        ];
+        $created = $wishlist->wasRecentlyCreated;
 
         return response()->json([
-            'status'  => 'success',
+            'status'  => $created ? 'success' : 'already_exists',
             'id'      => $wishlist->id,
-            'message' => '已加入收藏！',
+            'message' => $created ? '已加入收藏！' : '已在收藏清單中',
         ]);
     }
 

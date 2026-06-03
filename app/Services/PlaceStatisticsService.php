@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Trip;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PlaceStatisticsService
@@ -18,39 +19,47 @@ class PlaceStatisticsService
      */
     public function getTopPlaces(int $limit = 15): array
     {
-        $placeCounts = [];
+        return Cache::remember("top_places_{$limit}", 3600, function () use ($limit) {
+            $placeCounts = [];
 
-        // 只撈需要的欄位，並用 cursor 串流，不把全表塞進記憶體
-        Trip::whereNotNull('itinerary_data')
-            ->select('id', 'itinerary_data')
-            ->cursor()
-            ->each(function (Trip $trip) use (&$placeCounts) {
-                $itinerary = $this->decodeItinerary($trip);
-                if (!is_array($itinerary)) return;
+            // 只撈需要的欄位，並用 cursor 串流，不把全表塞進記憶體
+            Trip::whereNotNull('itinerary_data')
+                ->select('id', 'itinerary_data')
+                ->cursor()
+                ->each(function (Trip $trip) use (&$placeCounts) {
+                    $itinerary = $this->decodeItinerary($trip);
+                    if (!is_array($itinerary)) return;
 
-                foreach ($itinerary as $places) {
-                    if (!is_array($places)) continue;
-                    foreach ($places as $place) {
-                        $name = trim($place['name'] ?? '');
-                        if (empty($name) || $this->shouldExclude($name)) continue;
+                    foreach ($itinerary as $places) {
+                        if (!is_array($places)) continue;
+                        foreach ($places as $place) {
+                            $name = trim($place['name'] ?? '');
+                            if (empty($name) || $this->shouldExclude($name)) continue;
 
-                        if (!isset($placeCounts[$name])) {
-                            $placeCounts[$name] = [
-                                'name'   => $name,
-                                'count'  => 0,
-                                'photo'  => $place['photo']  ?? null,
-                                'rating' => $place['rating'] ?? 0,
-                                'types'  => $place['types']  ?? [],
-                            ];
+                            if (!isset($placeCounts[$name])) {
+                                $placeCounts[$name] = [
+                                    'name'   => $name,
+                                    'count'  => 0,
+                                    'photo'  => $place['photo']  ?? null,
+                                    'rating' => $place['rating'] ?? 0,
+                                    'types'  => $place['types']  ?? [],
+                                ];
+                            }
+                            $placeCounts[$name]['count']++;
                         }
-                        $placeCounts[$name]['count']++;
                     }
-                }
-            });
+                });
 
-        usort($placeCounts, fn($a, $b) => $b['count'] <=> $a['count']);
+            usort($placeCounts, fn($a, $b) => $b['count'] <=> $a['count']);
 
-        return array_slice($placeCounts, 0, $limit);
+            return array_slice($placeCounts, 0, $limit);
+        });
+    }
+
+    public function clearCache(): void
+    {
+        Cache::forget('top_places_6');
+        Cache::forget('top_places_15');
     }
 
     private function decodeItinerary(Trip $trip): ?array

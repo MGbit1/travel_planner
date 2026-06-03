@@ -43,7 +43,11 @@ class FeedController extends Controller
             });
         });
 
-        match ($request->input('sort', 'latest')) {
+        $sort = in_array($request->input('sort'), ['latest', 'likes', 'views'])
+            ? $request->input('sort')
+            : 'latest';
+
+        match ($sort) {
             'likes'  => $query->orderByDesc('likes_count'),
             'views'  => $query->orderByDesc('views_count'),
             default  => $query->latest(),

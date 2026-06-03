@@ -5,6 +5,8 @@ services:
     plan: free
     healthCheckPath: /
     envVars:
+      - key: APP_NAME
+        value: "TripFlow 覓路"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG

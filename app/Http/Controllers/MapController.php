@@ -15,78 +15,6 @@ class MapController extends Controller
         return view('welcome', compact('places'));
     }
 
-    public function store(Request $request) {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'latitude' => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ]);
-        
-        Place::create($validated);
-        return back()->with('success', '景點已成功新增！');
-    }
-
-    public function destroy($id){
-        $place = Place::findOrFail($id);
-        $place->delete();
-        return back()->with('success', '景點已成功刪除！');
-    }
-
-    public function aiPlan()
-    {
-        $executed = RateLimiter::attempt(
-            'ai-plan-unique-limit',
-            1,
-            function() { return true; },
-            60
-        );
-
-        if (!$executed) {
-            return response()->json([
-                'message' => '⚠️ 伺服器冷卻中！請等待 60 秒後再按，避免 API Key 被鎖定。'
-            ], 429);
-        }
-
-        $places = Place::all();
-        if ($places->isEmpty()) return response()->json(['message' => '目前清單是空的！']);
-
-        $apiKey = trim(env('GEMINI_API_KEY'));
-        $locationContext = $places->map(fn($p) => "- {$p->title} (座標: {$p->latitude}, {$p->longitude})")->implode("\n");
-
-        $prompt = "你是一位專業導遊。請根據以下座標規劃順路行程：\n{$locationContext}\n\n" .
-                  "任務：\n" .
-                  "1. 規劃最順路順序並用繁體中文簡介。\n" .
-                  "2. 重要：請在回覆的最末端，務必用這一行格式寫出順序，且名稱必須與清單完全相同：\n" .
-                  "[Order: 景點名稱1, 景點名稱2, ...]";
-
-        try {
-            $url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}";
-
-            $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->withoutVerifying()
-                ->timeout(120)
-                ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
-                ->post($url, [
-                    'contents' => [['parts' => [['text' => $prompt]]]]
-                ]);
-
-            if ($response->successful()) {
-                $resData = $response->json();
-                $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? 'AI 回傳格式異常';
-                return response()->json(['message' => $aiText]);
-            }
-
-            return response()->json([
-                'message' => 'Google API 報錯 - ' . ($response->json()['error']['message'] ?? '未知錯誤'),
-                'detail' => $response->json()
-            ], $response->status());
-
-        } catch (\Exception $e) {
-            return response()->json(['message' => '連線異常：' . $e->getMessage()], 500);
-        }
-    }
-
     public function generateAI(Request $request) {
         // 每位登入用戶每 60 秒限制 1 次，未登入則以 IP 為鍵
         $rateLimitKey = 'ai-generate-' . (auth()->id() ?? $request->ip());
@@ -212,9 +140,14 @@ class MapController extends Controller
 
         try {
             if (!$response->successful()) {
+                \Log::error('Gemini API 非成功回應', [
+                    'status'  => $response->status(),
+                    'body'    => $response->body(),
+                    'user_id' => auth()->id(),
+                ]);
                 return response()->json([
                     'status'  => 'error',
-                    'message' => '【Google 拒絕連線】：' . $response->body(),
+                    'message' => 'AI 服務暫時無法使用，請稍後再試。',
                 ], $response->status());
             }
 

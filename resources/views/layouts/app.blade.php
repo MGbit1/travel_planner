@@ -5,8 +5,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'TripFlow') }}</title>
+        <title>{{ config('app.name', 'TripFlow 覓路') }}</title>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+        <meta property="og:title" content="{{ config('app.name', 'TripFlow 覓路') }} — 智慧旅遊規劃平台" />
+        <meta property="og:description" content="用 AI 規劃完美行程、探索全球景點靈感，與旅人社群分享你的旅遊故事。" />
+        <meta property="og:image" content="https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&q=80" />
+        <meta property="og:url" content="{{ url()->current() }}" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="TripFlow 覓路" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="{{ config('app.name', 'TripFlow 覓路') }} — 智慧旅遊規劃平台" />
+        <meta name="twitter:description" content="用 AI 規劃完美行程、探索全球景點靈感，與旅人社群分享你的旅遊故事。" />
+        <meta name="twitter:image" content="https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&q=80" />
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
