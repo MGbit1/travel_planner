@@ -394,7 +394,7 @@ async function submitComment() {
     try {
         const res  = await fetch(`/posts/${POST_ID}/comments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
             body: JSON.stringify({ content })
         });
 
@@ -449,7 +449,7 @@ async function deleteComment(commentId) {
     try {
         const res = await fetch(`/comments/${commentId}`, {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF }
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
         });
         if (!res.ok) throw new Error('failed');
         const el = document.getElementById(`comment-${commentId}`);
