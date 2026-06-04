@@ -16,13 +16,15 @@ class MapController extends Controller
     }
 
     public function generateAI(Request $request) {
-        // 每位登入用戶每 60 秒限制 1 次，未登入則以 IP 為鍵
+        // 每位登入用戶每 60 秒限制 3 次，未登入則以 IP 為鍵
         $rateLimitKey = 'ai-generate-' . (auth()->id() ?? $request->ip());
-        $executed = RateLimiter::attempt($rateLimitKey, 1, function () { return true; }, 60);
+        $executed = RateLimiter::attempt($rateLimitKey, 3, function () { return true; }, 60);
         if (!$executed) {
+            $seconds = RateLimiter::availableIn($rateLimitKey);
             return response()->json([
-                'status'  => 'error',
-                'message' => '⚠️ 伺服器冷卻中！請等待 60 秒後再按，避免 API Key 被鎖定。',
+                'status'        => 'rate_limit',
+                'message'       => "AI 請求次數已達上限，請等待 {$seconds} 秒後再試。",
+                'retry_after'   => $seconds,
             ], 429);
         }
 

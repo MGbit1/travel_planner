@@ -205,9 +205,13 @@
                             <i class="bi bi-stars text-indigo-500" id="ai-btn-icon"></i>
                             <span id="ai-btn-text">✦ 生成建議路線</span>
                         </button>
+                        <div id="ai-error-banner" class="hidden mt-2 px-3 py-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-[12px] font-semibold flex items-center gap-2">
+                            <i class="bi bi-exclamation-circle-fill text-rose-400 shrink-0"></i>
+                            <span id="ai-error-msg"></span>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div id="route-toggles" class="hidden bg-white p-4 rounded-xl border border-slate-200 space-y-3 animate-fade-in-up">
                     <h3 class="font-semibold text-slate-700 text-sm flex justify-between items-center">
                         <span class="flex items-center gap-1.5"><i class="bi bi-signpost-split text-slate-400"></i> 路線檢視</span>
@@ -865,12 +869,13 @@
                     refreshMarkersOnly(); 
                     calculateRoute();
                     
-                    alert("✨ 最佳化完成！");
+                    showAIError('✅ 最佳化完成！');
+                    setTimeout(() => document.getElementById('ai-error-banner')?.classList.add('hidden'), 2000);
                 } else {
-                    alert("❌ 最佳化失敗：" + (data.message || "請檢查 API 設定"));
+                    showAIError(data.message || '最佳化失敗，請稍後再試', data.retry_after || 0);
                 }
             } catch (error) {
-                alert("🚨 連線異常，請確認伺服器運作中");
+                showAIError('連線異常，請確認網路後重試');
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -1282,15 +1287,30 @@
                     document.getElementById('ai-distance-suggestion').innerHTML = '';
                     document.getElementById('ai-time-suggestion').innerHTML = '';
                 } else {
-                    alert("❌ 規劃失敗：" + (data.message || "請檢查系統設定"));
+                    showAIError(data.message || '規劃失敗，請稍後再試', data.retry_after || 0);
                 }
             } catch (error) {
-                alert("🚨 連線異常，請確認伺服器運作中");
+                showAIError('連線異常，請確認網路後重試');
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 icon.className = "bi bi-magic";
                 btnText.innerText = "生成建議路線";
+            }
+        }
+
+        function showAIError(message, retryAfter = 0) {
+            const banner = document.getElementById('ai-error-banner');
+            const msg    = document.getElementById('ai-error-msg');
+            if (!banner || !msg) return;
+            banner.classList.remove('hidden');
+            if (retryAfter > 0) {
+                let s = retryAfter;
+                const tick = () => { msg.textContent = message + `（${s}秒後可再試）`; if (--s <= 0) { banner.classList.add('hidden'); } else { setTimeout(tick, 1000); } };
+                tick();
+            } else {
+                msg.textContent = message;
+                setTimeout(() => banner.classList.add('hidden'), 6000);
             }
         }
 
