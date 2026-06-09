@@ -117,6 +117,17 @@ class MapController extends Controller
                     ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
                     ->post($url, ['contents' => $contents]);
 
+                if ($response->status() === 429) {
+                    \Log::warning("Gemini API 429 配額超限", [
+                        'user_id' => auth()->id(),
+                        'body'    => $response->body(),
+                    ]);
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'AI 服務今日使用量已達上限，請明天（台灣時間早上 8 點後）再試。',
+                    ], 429);
+                }
+
                 if ($response->status() === 503) {
                     \Log::warning("Gemini API 503（第 {$attempt} 次）", [
                         'user_id' => auth()->id(),
