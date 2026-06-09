@@ -59,7 +59,7 @@ class MapController extends Controller
                        "3. 【出發地優先】：若提及「出發地」或「住家」，【必須】設為第 1 站。\n" .
                        "4. 【回程限制】：除非使用者明確要求，否則【絕對不要】擅自安排回家行程。\n" .
                        "5. 【精準導航意圖】：若需求只是「A地到B地」，請【只】輸出這 2 個地點。\n" .
-                       "6. 【交通模式】：正確回傳代碼（DRIVING, TWO_WHEELER, TRANSIT, WALKING, BICYCLING）。\n" .
+                       "6. 【交通模式與多模式時間】：全域 	ravel_mode 回傳整趟行程建議的主要交通方式。每個景點【必須】填寫 	ransport_times，包含至少 WALKING 和 DRIVING 兩種時間估算（若適合騎車請也加上 BICYCLING），時間請依實際距離估算，格式如「20 分鐘」。\n" .
                        "7. 【溫馨預警與備案】：優先遵守使用者時間，若有妥協（如錯過夕陽、店家未開）須在 ai_message 提醒，並附上一個『雨天備案建議』。\n" .
                        "8. 【跨天與指定天數操作】：若使用者「明確指定」要操作其他天數（例如說：「第二天要跟第一天一樣」、「幫我新增第三天」），請務必在 JSON 中輸出對應的天數（例如 `\"day\": 2`），系統才能正確分配。\n" .
                        "9. 【預算與免費標註】：cost_estimate 須具體（如：門票 $200、餐費 $400），免費則寫 $0。\n" .
@@ -71,7 +71,7 @@ class MapController extends Controller
                         "    (1) 先以「最保守交通方式（步行）」為假設輸出一份完整暫定行程，讓使用者有行程可參考。\n" .
                         "    (2) 同時在 `ai_message` 說明假設並主動詢問（例如：「我先以步行方式估算了園區內時間，若您打算租借電動代步車、單車或有接駁車，請告訴我，我會重新調整！」）。\n" .
                         "    【禁止】只問問題而不附上暫定行程。\n    【必須】：封閉園區內各景點的 	ravel_mode 欄位設為 WALKING（或其他實際可用模式），	ravel_time 按步行距離估算，不可沿用全程的 DRIVING。\n" .
-                        "13. 【行程總時數把關】：每天所有景點的 travel_time 與 stay_time 加總後，若超過 10 小時，【必須】在 `ai_message` 明確警告使用者「行程偏緊」，並具體建議可刪減哪個景點，以及刪減後預估省下多少時間。\n" .
+                        "13. 【行程總時數把關】：每天所有景點的 transport_times.WALKING 與 stay_time 加總後，若超過 10 小時，【必須】在 `ai_message` 明確警告使用者「行程偏緊」，並具體建議可刪減哪個景點，以及刪減後預估省下多少時間。\n" .
                         "14. 【用餐時段錨點】：若單日行程超過 4 小時，【必須】在午餐時段（11:30–13:00）與晚餐時段（17:30–19:30）各安排至少一個用餐景點（餐廳或小吃），不可讓使用者連續 5 小時以上沒有用餐安排。若使用者已自行指定餐廳，則以使用者為準。\n\n" .
                         "請嚴格以純 JSON 格式回覆：\n" .
                         "{\n" .
@@ -83,8 +83,9 @@ class MapController extends Controller
                         "      \"suggestions\": [\n" .
                         "        {\n" .
                         "          \"name\": \"...\", \"lat\": ..., \"lng\": ..., \n" .
-                        "          \"travel_mode\": \"DRIVING|WALKING|BICYCLING|TRANSIT|TWO_WHEELER\",\n" .
-                        "          \"travel_time\": \"...\", \"stay_time\": \"...\", \n" .
+                        "          \"travel_mode\": \"建議的主要交通方式代碼\",\n" .
+                        "          \"transport_times\": { \"WALKING\": \"...\", \"DRIVING\": \"...\", \"BICYCLING\": \"...\" },\n" .
+                        "          \"stay_time\": \"...\", \n" .
                         "          \"cost_estimate\": \"...\", \"reason\": \"...\",\n" .
                         "          \"parking_mode\": \"INTERNAL 或 EXTERNAL\"\n" .
                         "        }\n" .

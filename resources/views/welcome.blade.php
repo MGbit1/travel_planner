@@ -778,20 +778,12 @@
                         let aiItem = suggestions.find(s => s.name.includes(p.name) || p.name.includes(s.name) || s.name === p.name);
                         
                         if (aiItem) {
-                            let itemMode = aiItem.travel_mode || currentMode;
-                            let modeEmoji = '🚗';
-                            if (itemMode === 'TWO_WHEELER') modeEmoji = '🛵';
-                            else if (itemMode === 'TRANSIT') modeEmoji = '🚌';
-                            else if (itemMode === 'BICYCLING') modeEmoji = '🚲';
-                            else if (itemMode === 'WALKING') modeEmoji = '🚶';
-
-                            let travel = (index === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
-                            let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
-                            let cost = aiItem.cost_estimate ? `💰 ${aiItem.cost_estimate}` : '';
-                            let reason = aiItem.reason ? `💡 ${aiItem.reason}` : '';
-                            
-                            p.ai_description = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+                            if (aiItem.transport_times) p.transport_times = aiItem.transport_times;
+                            if (aiItem.stay_time) p.stay_time_raw = aiItem.stay_time;
+                            if (aiItem.cost_estimate) p.cost_estimate_raw = aiItem.cost_estimate;
+                            if (aiItem.reason) p.reason_raw = aiItem.reason;
                             if (aiItem.parking_mode) p.parking_mode = aiItem.parking_mode;
+                            p.ai_description = rebuildAiDescription(p, index, currentMode);
                             
                             hasUpdates = true;
                         }
@@ -846,19 +838,12 @@
                     suggestions.forEach(aiItem => {
                         let matchIndex = unmatched.findIndex(p => aiItem.name.includes(p.name) || p.name.includes(aiItem.name) || aiItem.name === p.name);
                         if (matchIndex !== -1) {
-                            let itemMode2 = aiItem.travel_mode || data.travel_mode;
-                            let modeEmoji = '🚗';
-                            if (itemMode2 === 'TWO_WHEELER') modeEmoji = '🛵';
-                            else if (itemMode2 === 'TRANSIT') modeEmoji = '🚌';
-                            else if (itemMode2 === 'BICYCLING') modeEmoji = '🚲';
-                            else if (itemMode2 === 'WALKING') modeEmoji = '🚶';
-
-                            let travel = (newOrder.length === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
-                            let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
-                            let cost = aiItem.cost_estimate ? `💰 ${aiItem.cost_estimate}` : '';
-                            let reason = aiItem.reason ? `💡 ${aiItem.reason}` : '';
-                            
-                            unmatched[matchIndex].ai_description = [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+                            const pt = unmatched[matchIndex];
+                            if (aiItem.transport_times) pt.transport_times = aiItem.transport_times;
+                            if (aiItem.stay_time) pt.stay_time_raw = aiItem.stay_time;
+                            if (aiItem.cost_estimate) pt.cost_estimate_raw = aiItem.cost_estimate;
+                            if (aiItem.reason) pt.reason_raw = aiItem.reason;
+                            pt.ai_description = rebuildAiDescription(pt, newOrder.length, currentMode);
                             newOrder.push(unmatched[matchIndex]);
                             unmatched.splice(matchIndex, 1);
                         }
@@ -1244,8 +1229,9 @@
                                     await new Promise((resolve) => { geocoder.geocode({ address: item.name }, (results, status) => { if (status === 'OK' && results[0]) finalLocation = results[0].geometry.location; resolve(); }); });
                                 }
                                 const modeLabels = { DRIVING: '開車', TWO_WHEELER: '機車', TRANSIT: '大眾運輸', BICYCLING: '騎車', WALKING: '步行' };
-                                let modeStr = modeLabels[item.travel_mode || data.travel_mode] || '開車';
-                                let travel = (index === 0) ? '起點' : (item.travel_time ? `${modeStr} ${item.travel_time}` : '');
+                                const globalMode = data.travel_mode || 'DRIVING';
+                                const initTime = getTransportTime(item.transport_times, globalMode) || item.travel_time || '';
+                                let travel = (index === 0) ? '起點' : (initTime ? `${modeLabels[globalMode] || '開車'} ${initTime}` : '');
                                 let stay = item.stay_time ? `停留 ${item.stay_time}` : '';
                                 let cost = item.cost_estimate ? `${item.cost_estimate}` : '';
                                 let reason = item.reason ? `${item.reason}` : '';
@@ -1267,7 +1253,11 @@
                                     reviews: [], 
                                     isLocked: false,
                                     parking_mode: item.parking_mode || null,
-                                    travel_mode: item.travel_mode || null
+                                    travel_mode: item.travel_mode || null,
+                                    transport_times: item.transport_times || null,
+                                    stay_time_raw: item.stay_time || null,
+                                    cost_estimate_raw: item.cost_estimate || null,
+                                    reason_raw: item.reason || null
                                 });
                             }
                             itineraryData[dayNum] = newPoints;
@@ -1321,7 +1311,33 @@
         function moveItem(index, direction) { const currentItinerary = itineraryData[currentDay]; const target = index + direction; if (target < 0 || target >= currentItinerary.length) return; const temp = currentItinerary[index]; currentItinerary[index] = currentItinerary[target]; currentItinerary[target] = temp; updateUI(); refreshMarkersOnly(); if (routeLines.length > 0) calculateRoute(); }
         function removeItem(id) { itineraryData[currentDay] = itineraryData[currentDay].filter(p => p.id !== id); updateUI(); refreshMarkersOnly(); if (itineraryData[currentDay].length >= 2) { calculateRoute(); } else { clearAllRoutes(); } }
         function toggleTraffic() { if (trafficLayer.getMap()) { trafficLayer.setMap(null); } else { trafficLayer.setMap(map); } }
-        function updateTravelMode(mode) { currentMode = mode; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); document.getElementById(`btn-${mode}`).classList.add('active'); if (itineraryData[currentDay].length >= 2) calculateRoute(); }
+        function getModeEmoji(mode) {
+            const emojis = { DRIVING: '🚗', TWO_WHEELER: '🛵', TRANSIT: '🚌', BICYCLING: '🚲', WALKING: '🚶' };
+            return emojis[mode] || '🚗';
+        }
+        function getTransportTime(transportTimes, mode) {
+            if (!transportTimes) return null;
+            const lookup = (mode === 'TWO_WHEELER' || mode === 'TRANSIT') ? 'DRIVING' : mode;
+            return transportTimes[lookup] || transportTimes['WALKING'] || null;
+        }
+        function rebuildAiDescription(point, index, mode) {
+            const time = getTransportTime(point.transport_times, mode);
+            const travel = (index === 0) ? '📍 出發點' : (time ? `${getModeEmoji(mode)} ${time}` : '');
+            const stay = point.stay_time_raw ? `⏱️ ${point.stay_time_raw}` : '';
+            const cost = point.cost_estimate_raw ? `💰 ${point.cost_estimate_raw}` : '';
+            const reason = point.reason_raw ? `💡 ${point.reason_raw}` : '';
+            return [travel, stay, cost, reason].filter(Boolean).join(' ｜ ');
+        }
+        function updateTravelMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+            (itineraryData[currentDay] || []).forEach((p, i) => {
+                if (p.transport_times) p.ai_description = rebuildAiDescription(p, i, mode);
+            });
+            updateUI();
+            if (itineraryData[currentDay].length >= 2) calculateRoute();
+        }
         function toggleLeg(idx, checked) { if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); const totalLegs = itineraryData[currentDay].length - 1; const allChecked = visibleLegs.size === totalLegs && totalLegs > 0; document.getElementById('toggle-all-routes').checked = allChecked; updateRouteVisibility(); renderAISuggestions(); }
         function toggleAllRoutes(checked) { document.querySelectorAll('#route-toggle-list input[type="checkbox"]').forEach(cb => cb.checked = checked); if (checked) for(let i=0; i < itineraryData[currentDay].length - 1; i++) visibleLegs.add(i); else visibleLegs.clear(); updateRouteVisibility(); renderAISuggestions(); }
 
