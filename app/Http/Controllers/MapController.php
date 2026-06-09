@@ -198,7 +198,7 @@ class MapController extends Controller
                 'status'      => 'success',
                 'ai_message'  => $result['ai_message']  ?? '規劃完成！',
                 'travel_mode' => $result['travel_mode'] ?? 'DRIVING',
-                'days'        => $result['days']        ?? [],
+                'days'        => $this->enrichWithDistanceMatrix($result['days'] ?? []),
             ]);
 
         } catch (\Exception $e) {
@@ -207,5 +207,70 @@ class MapController extends Controller
                 'message' => '【本機系統崩潰】：' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function enrichWithDistanceMatrix(array $days): array
+    {
+        $googleKey = env('GOOGLE_MAPS_API_KEY');
+        if (empty($googleKey)) return $days;
+
+        $modes    = ['walking', 'driving', 'bicycling'];
+        $meta     = [];
+        $poolJobs = [];
+
+        foreach ($days as $di => $day) {
+            $sugs = $day['suggestions'] ?? [];
+            for ($i = 1; $i < count($sugs); $i++) {
+                $origin = $sugs[$i - 1]['lat'] . ',' . $sugs[$i - 1]['lng'];
+                $dest   = $sugs[$i]['lat']     . ',' . $sugs[$i]['lng'];
+                foreach ($modes as $mode) {
+                    $key = "{$di}_{$i}_{$mode}";
+                    $meta[$key]     = ['di' => $di, 'si' => $i, 'mode' => strtoupper($mode)];
+                    $poolJobs[$key] = ['origin' => $origin, 'dest' => $dest, 'mode' => $mode];
+                }
+            }
+        }
+
+        if (empty($poolJobs)) return $days;
+
+        try {
+            $responses = Http::pool(function ($pool) use ($poolJobs, $googleKey) {
+                $reqs = [];
+                foreach ($poolJobs as $key => $job) {
+                    $reqs[] = $pool->as($key)
+                        ->withoutVerifying()
+                        ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                        ->timeout(15)
+                        ->get('https://maps.googleapis.com/maps/api/distancematrix/json', [
+                            'origins'      => $job['origin'],
+                            'destinations' => $job['dest'],
+                            'mode'         => $job['mode'],
+                            'language'     => 'zh-TW',
+                            'key'          => $googleKey,
+                        ]);
+                }
+                return $reqs;
+            });
+
+            foreach ($responses as $key => $res) {
+                if (!isset($meta[$key])) continue;
+                try {
+                    if (!$res->successful()) continue;
+                    $data    = $res->json();
+                    $element = $data['rows'][0]['elements'][0] ?? [];
+                    if (($data['status'] ?? '') !== 'OK' || ($element['status'] ?? '') !== 'OK') continue;
+                    $duration = $element['duration']['text'] ?? null;
+                    if (!$duration) continue;
+                    $m = $meta[$key];
+                    $days[$m['di']]['suggestions'][$m['si']]['transport_times'][$m['mode']] = $duration;
+                } catch (\Exception $e) {
+                    continue;
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Distance Matrix API 失敗，保留 AI 估算', ['error' => $e->getMessage()]);
+        }
+
+        return $days;
     }
 }
