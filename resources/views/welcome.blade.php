@@ -1320,9 +1320,17 @@
             const lookup = (mode === 'TWO_WHEELER' || mode === 'TRANSIT') ? 'DRIVING' : mode;
             return transportTimes[lookup] || transportTimes['WALKING'] || null;
         }
+        function getEffectiveMode(transportTimes, mode) {
+            if (!transportTimes) return mode;
+            const lookup = (mode === 'TWO_WHEELER' || mode === 'TRANSIT') ? 'DRIVING' : mode;
+            if (transportTimes[lookup]) return mode;
+            if (transportTimes['DRIVING']) return 'DRIVING';
+            return 'WALKING';
+        }
         function rebuildAiDescription(point, index, mode) {
+            const effectiveMode = getEffectiveMode(point.transport_times, mode);
             const time = getTransportTime(point.transport_times, mode);
-            const travel = (index === 0) ? '📍 出發點' : (time ? `${getModeEmoji(mode)} ${time}` : '');
+            const travel = (index === 0) ? '📍 出發點' : (time ? `${getModeEmoji(effectiveMode)} ${time}` : '');
             const stay = point.stay_time_raw ? `⏱️ ${point.stay_time_raw}` : '';
             const cost = point.cost_estimate_raw ? `💰 ${point.cost_estimate_raw}` : '';
             const reason = point.reason_raw ? `💡 ${point.reason_raw}` : '';
