@@ -70,7 +70,7 @@ class MapController extends Controller
                         "12. 【景區內交通主動確認】：若行程中多個景點位於同一封閉式園區（如溪頭、阿里山、合歡山、墾丁各景區、觀光農場、主題樂園等），【必須】做到以下兩點：\n" .
                         "    (1) 先以「最保守交通方式（步行）」為假設輸出一份完整暫定行程，讓使用者有行程可參考。\n" .
                         "    (2) 同時在 `ai_message` 說明假設並主動詢問（例如：「我先以步行方式估算了園區內時間，若您打算租借電動代步車、單車或有接駁車，請告訴我，我會重新調整！」）。\n" .
-                        "    【禁止】只問問題而不附上暫定行程，也【禁止】對封閉園區景點套用全程的 DRIVING 交通時間。\n" .
+                        "    【禁止】只問問題而不附上暫定行程。\n    【必須】：封閉園區內各景點的 	ravel_mode 欄位設為 WALKING（或其他實際可用模式），	ravel_time 按步行距離估算，不可沿用全程的 DRIVING。\n" .
                         "13. 【行程總時數把關】：每天所有景點的 travel_time 與 stay_time 加總後，若超過 10 小時，【必須】在 `ai_message` 明確警告使用者「行程偏緊」，並具體建議可刪減哪個景點，以及刪減後預估省下多少時間。\n" .
                         "14. 【用餐時段錨點】：若單日行程超過 4 小時，【必須】在午餐時段（11:30–13:00）與晚餐時段（17:30–19:30）各安排至少一個用餐景點（餐廳或小吃），不可讓使用者連續 5 小時以上沒有用餐安排。若使用者已自行指定餐廳，則以使用者為準。\n\n" .
                         "請嚴格以純 JSON 格式回覆：\n" .
@@ -83,9 +83,10 @@ class MapController extends Controller
                         "      \"suggestions\": [\n" .
                         "        {\n" .
                         "          \"name\": \"...\", \"lat\": ..., \"lng\": ..., \n" .
-                        "          \"travel_time\": \"...\", \"stay_time\": \"...\", \n" .
-                        "          \"cost_estimate\": \"...\", \"reason\": \"...\",\n" .
-                        "          \"parking_mode\": \"INTERNAL 或 EXTERNAL\" // 💡 新增這個欄位\n" .
+                        "          \"travel_mode\": \"DRIVING|WALKING|BICYCLING|TRANSIT|TWO_WHEELER\",\n" .
+                        "          \"travel_time\": \"...\", \"stay_time\": \"...\", \n" .
+                        "          \"cost_estimate\": \"...\", \"reason\": \"...\",\n" .
+                        "          \"parking_mode\": \"INTERNAL 或 EXTERNAL\"\n" .
                         "        }\n" .
                         "      ]\n" .
                         "    }\n" .

@@ -778,11 +778,12 @@
                         let aiItem = suggestions.find(s => s.name.includes(p.name) || p.name.includes(s.name) || s.name === p.name);
                         
                         if (aiItem) {
+                            let itemMode = aiItem.travel_mode || currentMode;
                             let modeEmoji = '🚗';
-                            if (currentMode === 'TWO_WHEELER') modeEmoji = '🛵';
-                            else if (currentMode === 'TRANSIT') modeEmoji = '🚌';
-                            else if (currentMode === 'BICYCLING') modeEmoji = '🚲';
-                            else if (currentMode === 'WALKING') modeEmoji = '🚶';
+                            if (itemMode === 'TWO_WHEELER') modeEmoji = '🛵';
+                            else if (itemMode === 'TRANSIT') modeEmoji = '🚌';
+                            else if (itemMode === 'BICYCLING') modeEmoji = '🚲';
+                            else if (itemMode === 'WALKING') modeEmoji = '🚶';
 
                             let travel = (index === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
                             let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
@@ -845,11 +846,12 @@
                     suggestions.forEach(aiItem => {
                         let matchIndex = unmatched.findIndex(p => aiItem.name.includes(p.name) || p.name.includes(aiItem.name) || aiItem.name === p.name);
                         if (matchIndex !== -1) {
+                            let itemMode2 = aiItem.travel_mode || data.travel_mode;
                             let modeEmoji = '🚗';
-                            if (data.travel_mode === 'TWO_WHEELER') modeEmoji = '🛵';
-                            else if (data.travel_mode === 'TRANSIT') modeEmoji = '🚌';
-                            else if (data.travel_mode === 'BICYCLING') modeEmoji = '🚲';
-                            else if (data.travel_mode === 'WALKING') modeEmoji = '🚶';
+                            if (itemMode2 === 'TWO_WHEELER') modeEmoji = '🛵';
+                            else if (itemMode2 === 'TRANSIT') modeEmoji = '🚌';
+                            else if (itemMode2 === 'BICYCLING') modeEmoji = '🚲';
+                            else if (itemMode2 === 'WALKING') modeEmoji = '🚶';
 
                             let travel = (newOrder.length === 0) ? '📍 出發點' : (aiItem.travel_time ? `${modeEmoji} ${aiItem.travel_time}` : '');
                             let stay = aiItem.stay_time ? `⏱️ ${aiItem.stay_time}` : '';
@@ -1241,7 +1243,8 @@
                                 if (isDashboard) {
                                     await new Promise((resolve) => { geocoder.geocode({ address: item.name }, (results, status) => { if (status === 'OK' && results[0]) finalLocation = results[0].geometry.location; resolve(); }); });
                                 }
-                                let modeStr = (data.travel_mode === 'TWO_WHEELER') ? '機車' : '開車';
+                                const modeLabels = { DRIVING: '開車', TWO_WHEELER: '機車', TRANSIT: '大眾運輸', BICYCLING: '騎車', WALKING: '步行' };
+                                let modeStr = modeLabels[item.travel_mode || data.travel_mode] || '開車';
                                 let travel = (index === 0) ? '起點' : (item.travel_time ? `${modeStr} ${item.travel_time}` : '');
                                 let stay = item.stay_time ? `停留 ${item.stay_time}` : '';
                                 let cost = item.cost_estimate ? `${item.cost_estimate}` : '';
@@ -1263,7 +1266,8 @@
                                     types: placeTypes, 
                                     reviews: [], 
                                     isLocked: false,
-                                    parking_mode: item.parking_mode || null
+                                    parking_mode: item.parking_mode || null,
+                                    travel_mode: item.travel_mode || null
                                 });
                             }
                             itineraryData[dayNum] = newPoints;
