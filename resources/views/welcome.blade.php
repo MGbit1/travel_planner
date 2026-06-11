@@ -700,7 +700,7 @@
             });
         }
 
-        async function calculateRoute() {
+        async function calculateRoute(skipTimeAnalysis = false) {
             const currentItinerary = itineraryData[currentDay] || []; if (currentItinerary.length < 2) return;
             clearAllRoutes(); document.getElementById('route-toggles').classList.remove('hidden');
             
@@ -733,9 +733,9 @@
                     return; 
                 }
             }
-            renderAISuggestions(); updateRouteVisibility(); 
-            checkOptimalRouteSuggestion(); 
-            analyzeTimeSuitabilityInBackground(); 
+            renderAISuggestions(); updateRouteVisibility();
+            checkOptimalRouteSuggestion();
+            if (!skipTimeAnalysis) analyzeTimeSuitabilityInBackground();
         }
 
         async function analyzeTimeSuitabilityInBackground() {
@@ -1371,7 +1371,7 @@
                 if (p.transport_times) p.ai_description = rebuildAiDescription(p, i, mode);
             });
             updateUI();
-            if (itineraryData[currentDay].length >= 2) calculateRoute();
+            if (itineraryData[currentDay].length >= 2) calculateRoute(true);
         }
         function toggleLeg(idx, checked) { if (checked) visibleLegs.add(idx); else visibleLegs.delete(idx); const totalLegs = itineraryData[currentDay].length - 1; const allChecked = visibleLegs.size === totalLegs && totalLegs > 0; document.getElementById('toggle-all-routes').checked = allChecked; updateRouteVisibility(); renderAISuggestions(); }
         function toggleAllRoutes(checked) { document.querySelectorAll('#route-toggle-list input[type="checkbox"]').forEach(cb => cb.checked = checked); if (checked) for(let i=0; i < itineraryData[currentDay].length - 1; i++) visibleLegs.add(i); else visibleLegs.clear(); updateRouteVisibility(); renderAISuggestions(); }
