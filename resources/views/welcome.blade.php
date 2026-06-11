@@ -1214,6 +1214,7 @@
 
                     if (data.days && data.days.length > 0) {
                         let highestDay = 1;
+                        const allNewPoints = [];
                         for (let dayObj of data.days) {
                             let dayNum = parseInt(dayObj.day) || 1;
                             if (dayNum > highestDay) highestDay = dayNum;
@@ -1257,16 +1258,19 @@
                                     transport_times: item.transport_times || null,
                                     stay_time_raw: item.stay_time || null,
                                     cost_estimate_raw: item.cost_estimate || null,
-                                    reason_raw: item.reason || null
+                                    reason_raw: item.reason || null,
+                                    isDashboard: isDashboard
                                 });
                             }
                             itineraryData[dayNum] = newPoints;
+                            allNewPoints.push(...newPoints);
                         }
                         dayCount = Math.max(dayCount, highestDay);
                         for(let i = 1; i <= dayCount; i++) if(!itineraryData[i]) itineraryData[i] = [];
                         
                         if (data.days.length > 0) { currentDay = parseInt(data.days[data.days.length - 1].day) || currentDay; }
                         renderDayTabs(); updateUI(); refreshMarkersOnly();
+                        normalizePlaceNames(allNewPoints);
                     }
                     
                     document.getElementById('ai-summary-container').classList.remove('hidden');
@@ -1311,6 +1315,27 @@
         function moveItem(index, direction) { const currentItinerary = itineraryData[currentDay]; const target = index + direction; if (target < 0 || target >= currentItinerary.length) return; const temp = currentItinerary[index]; currentItinerary[index] = currentItinerary[target]; currentItinerary[target] = temp; updateUI(); refreshMarkersOnly(); if (routeLines.length > 0) calculateRoute(); }
         function removeItem(id) { itineraryData[currentDay] = itineraryData[currentDay].filter(p => p.id !== id); updateUI(); refreshMarkersOnly(); if (itineraryData[currentDay].length >= 2) { calculateRoute(); } else { clearAllRoutes(); } }
         function toggleTraffic() { if (trafficLayer.getMap()) { trafficLayer.setMap(null); } else { trafficLayer.setMap(map); } }
+        async function normalizePlaceNames(points) {
+            if (!service) return;
+            const targets = points.filter(p => !p.isDashboard);
+            await Promise.all(targets.map(point => new Promise(resolve => {
+                service.textSearch({
+                    query: point.name,
+                    location: point.location,
+                    radius: 300
+                }, (results, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && results?.[0]) {
+                        point.name     = results[0].name;
+                        point.place_id = results[0].place_id;
+                        if (results[0].geometry?.location) point.location = results[0].geometry.location;
+                    }
+                    resolve();
+                });
+            })));
+            updateUI();
+            refreshMarkersOnly();
+        }
+
         function getModeEmoji(mode) {
             const emojis = { DRIVING: '🚗', TWO_WHEELER: '🛵', TRANSIT: '🚌', BICYCLING: '🚲', WALKING: '🚶' };
             return emojis[mode] || '🚗';
