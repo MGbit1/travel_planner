@@ -1353,8 +1353,9 @@
             return 'WALKING';
         }
         function rebuildAiDescription(point, index, mode) {
-            const effectiveMode = getEffectiveMode(point.transport_times, mode);
-            const time = getTransportTime(point.transport_times, mode);
+            const displayMode = (point.travel_mode === 'WALKING') ? 'WALKING' : mode;
+            const effectiveMode = getEffectiveMode(point.transport_times, displayMode);
+            const time = getTransportTime(point.transport_times, displayMode);
             const travel = (index === 0) ? '📍 出發點' : (time ? `${getModeEmoji(effectiveMode)} ${time}` : '');
             const stay = point.stay_time_raw ? `⏱️ ${point.stay_time_raw}` : '';
             const cost = point.cost_estimate_raw ? `💰 ${point.cost_estimate_raw}` : '';
