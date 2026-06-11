@@ -1231,8 +1231,9 @@
                                 }
                                 const modeLabels = { DRIVING: '開車', TWO_WHEELER: '機車', TRANSIT: '大眾運輸', BICYCLING: '騎車', WALKING: '步行' };
                                 const globalMode = data.travel_mode || 'DRIVING';
-                                const initTime = getTransportTime(item.transport_times, globalMode) || item.travel_time || '';
-                                let travel = (index === 0) ? '起點' : (initTime ? `${modeLabels[globalMode] || '開車'} ${initTime}` : '');
+                                const displayMode = (item.travel_mode === 'WALKING') ? 'WALKING' : globalMode;
+                                const initTime = getTransportTime(item.transport_times, displayMode) || item.travel_time || '';
+                                let travel = (index === 0) ? '起點' : (initTime ? `${modeLabels[displayMode] || '開車'} ${initTime}` : '');
                                 let stay = item.stay_time ? `停留 ${item.stay_time}` : '';
                                 let cost = item.cost_estimate ? `${item.cost_estimate}` : '';
                                 let reason = item.reason ? `${item.reason}` : '';
