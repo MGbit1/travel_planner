@@ -50,8 +50,35 @@ class MapController extends Controller
         }
         if (!$hasData) $itineraryContext .= "尚無資料。\n";
 
-        // 💡 這裡就是我們把「緊箍咒」加進去的地方！（第 11 點）
+        // 使用者歷史足跡：從最近 5 筆存檔行程抽出景點名稱，讓 AI 推斷偏好
+        $userHistoryContext = "";
+        if (auth()->check()) {
+            $recentTrips = \App\Models\Trip::where('user_id', auth()->id())
+                ->latest()->take(5)->get();
+            if ($recentTrips->isNotEmpty()) {
+                $placeNames = [];
+                foreach ($recentTrips as $trip) {
+                    foreach (($trip->itinerary_data ?? []) as $places) {
+                        foreach ($places as $place) {
+                            $name = $place['name'] ?? '';
+                            if ($name && !in_array($name, $placeNames)) {
+                                $placeNames[] = $name;
+                            }
+                        }
+                    }
+                }
+                if (!empty($placeNames)) {
+                    $list = implode('、', array_slice($placeNames, 0, 20));
+                    $userHistoryContext = "【使用者歷史足跡（供偏好推斷，非強制）】：\n" .
+                        "此使用者曾遊覽過：{$list}。\n" .
+                        "請從以上足跡自然推斷其旅遊偏好風格，在不違背使用者明確需求的前提下，優先推薦符合偏好的景點與路線。\n\n";
+                }
+            }
+        }
+
+                // 💡 這裡就是我們把「緊箍咒」加進去的地方！（第 11 點）
         $systemRules = "你是一位擁有「超強地理方向感」且「高情商貼心」的頂級旅遊規劃大師。\n" .
+                       $userHistoryContext .
                        $itineraryContext . "\n" .
                        "【⚠️ 核心強制規則（絕對遵守）】：\n" .
                        "1. 【極致順路】：排出的景點順序必須是地理動線最短，絕不走回頭路。\n" .
