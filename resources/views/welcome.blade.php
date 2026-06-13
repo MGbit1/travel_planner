@@ -420,6 +420,9 @@
                 if (dayNum > maxDay) maxDay = dayNum;
                 
                 itineraryData[dayNum] = loadedTripJson[dayStr].map(point => {
+                    if (!point.location?.lat || !point.location?.lng) {
+                        return { ...point, location: null };
+                    }
                     let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
                     bounds.extend(realLocation);
                     hasPoints = true;
