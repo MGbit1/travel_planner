@@ -10,7 +10,7 @@
 
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                     <x-nav-link href="/map" :active="request()->is('map')" class="font-medium text-slate-500 hover:text-slate-900">
-                        {{ __('探索地圖') }}
+                        {{ __('規劃行程') }}
                     </x-nav-link>
                     
                     <x-nav-link href="/feed" :active="request()->is('feed*')" class="font-medium text-slate-500 hover:text-slate-900">
@@ -80,7 +80,7 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden bg-white border-b border-slate-200">
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link href="/map" :active="request()->is('map')" @click="open = false">
-                {{ __('探索地圖') }}
+                {{ __('規劃行程') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link href="/feed" :active="request()->is('feed*')" @click="open = false">
                 {{ __('靈感社群') }}

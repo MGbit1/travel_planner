@@ -157,7 +157,7 @@
                 <p class="text-slate-700 text-base font-bold mb-2">目前還沒有人分享行程</p>
                 <p class="text-slate-400 text-sm mb-8">前往地圖規劃你的第一趟旅程，再分享給大家吧！</p>
                 <a href="/map" class="inline-flex items-center gap-2 bg-slate-800 text-white px-8 py-3 rounded-xl text-sm font-semibold hover:bg-slate-700 transition shadow-sm">
-                    <i class="bi bi-map-fill"></i> 前往探索地圖
+                    <i class="bi bi-map-fill"></i> 前往規劃行程
                 </a>
             </div>
         @endif

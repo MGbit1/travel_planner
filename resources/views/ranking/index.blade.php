@@ -167,7 +167,7 @@
             <h3 class="text-xl font-bold text-slate-700 mb-2">排行榜目前還在統計中</h3>
             <p class="text-slate-400 text-sm mb-8">快去地圖上規劃並儲存你的行程，成為第一個上榜的旅人！</p>
             <a href="/map" class="inline-flex items-center gap-2 bg-slate-800 text-white px-8 py-3 rounded-xl text-sm font-semibold shadow-sm hover:bg-slate-700 transition">
-                <i class="bi bi-map-fill"></i> 前往探索地圖
+                <i class="bi bi-map-fill"></i> 前往規劃行程
             </a>
         </div>
         @endforelse

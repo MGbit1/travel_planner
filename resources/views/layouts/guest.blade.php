@@ -39,7 +39,7 @@
             
             <div class="mt-8 z-10 animate-in fade-in duration-500 delay-300">
                 <a href="/" class="text-sm font-semibold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 bg-white/50 px-4 py-2 rounded-full border border-slate-200/50 shadow-sm backdrop-blur-sm">
-                    <i class="bi bi-arrow-left"></i> 返回探索地圖
+                    <i class="bi bi-arrow-left"></i> 返回規劃行程
                 </a>
             </div>
         </div>

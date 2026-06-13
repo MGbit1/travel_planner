@@ -310,7 +310,7 @@
             <span class="text-sm">智慧旅遊規劃平台</span>
         </div>
         <div class="flex items-center gap-6 text-sm">
-            <a href="/map" class="hover:text-white transition">探索地圖</a>
+            <a href="/map" class="hover:text-white transition">規劃行程</a>
             <a href="/feed" class="hover:text-white transition">靈感社群</a>
             <a href="/ranking" class="hover:text-white transition">熱門榜單</a>
             @auth
