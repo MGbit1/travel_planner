@@ -15,9 +15,14 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 // 地圖規劃頁
 Route::get('/map', function () {
     $loadedTrip = null;
-    if (request()->has('trip_id') && auth()->check()) {
-        $loadedTrip = \App\Models\Trip::where('id', request()->query('trip_id'))
-                        ->where('user_id', auth()->id())
+    if (request()->has('trip_id')) {
+        $tripId = request()->query('trip_id');
+        $loadedTrip = \App\Models\Trip::where('id', $tripId)
+                        ->where(function ($q) {
+                            // 自己的行程，或已發布到社群的公開行程
+                            $q->where('user_id', auth()->id())
+                              ->orWhereHas('posts');
+                        })
                         ->first();
     }
     $wishlistItems = auth()->check()

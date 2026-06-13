@@ -23,9 +23,13 @@ class Trip extends Model
         'chat_history' => 'array', // 💡 新增這行：自動將 JSON 轉為陣列
     ];
 
-    // 設定關聯：一趟行程屬於一個使用者
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function posts()
+    {
+        return $this->hasMany(\App\Models\Post::class);
     }
 }
