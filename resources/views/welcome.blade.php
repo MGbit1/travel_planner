@@ -762,6 +762,7 @@
                 if (myAnalysisId !== currentAnalysisId) return;
 
                 if (response.status === 401) { const box = document.getElementById('ai-time-suggestion'); if(box) box.innerHTML = ''; return; }
+                if (response.status === 419) { const box = document.getElementById('ai-time-suggestion'); if(box) box.innerHTML = ''; return; }
 
                 const data = await response.json();
 
@@ -826,6 +827,7 @@
                 });
 
                 if (response.status === 401) { alert("🔒 請先登入才能使用 AI 功能！"); return; }
+                if (response.status === 419) { showAIError('頁面已過期，請重新整理後再試。'); return; }
 
                 const data = await response.json();
 
@@ -1195,6 +1197,10 @@
 
                 if (response.status === 401) {
                     alert("🔒 請先登入才能使用 AI 規劃功能！\n點擊右上角「登入」或「免費註冊」即可開始。");
+                    return;
+                }
+                if (response.status === 419) {
+                    showAIError('頁面已過期，請重新整理（F5）後再試。');
                     return;
                 }
 
