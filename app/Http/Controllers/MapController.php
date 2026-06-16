@@ -36,7 +36,7 @@ class MapController extends Controller
 
         $currentDay = $request->input('current_day', 1);
 
-        if (empty($apiKey)) {
+        if (empty($apiKeys)) {
             return response()->json(['status' => 'error', 'message' => '系統找不到 API 金鑰，請確認 .env 設定！'], 500);
         }
 
