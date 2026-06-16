@@ -134,7 +134,7 @@ class MapController extends Controller
             'parts' => [['text' => "使用者最新需求：「{$userPrompt}」\n\n【⚠️ 系統強制規則（請務必遵守）】：\n{$systemRules}"]]
         ];
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$apiKey}";
         $maxRetries = 3;
         $response = null;
 
