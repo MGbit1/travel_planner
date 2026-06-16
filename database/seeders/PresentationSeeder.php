@@ -151,6 +151,222 @@ class PresentationSeeder extends Seeder
             'chat_history' => [],
         ]);
 
+        // ── 版本 B：美食探索型 vs 文化藝術型 ─────────────────────
+
+        $food = User::firstOrCreate(
+            ['email' => 'food@demo.com'],
+            ['name' => '美食探索者', 'password' => Hash::make('demo1234')]
+        );
+        Trip::where('user_id', $food->id)->delete();
+
+        Trip::create([
+            'user_id' => $food->id,
+            'title' => '台南小吃深度三日遊',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '花園夜市', 'address' => '台南市北區海安路三段533號', 'location' => ['lat' => 23.0220, 'lng' => 120.2280], 'stay_time' => '120 分鐘', 'cost_estimate' => '$350', 'travel_time' => '開車 10 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '度小月擔仔麵', 'address' => '台南市中西區中正路16號', 'location' => ['lat' => 22.9990, 'lng' => 120.2006], 'stay_time' => '60 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 10 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '安平老街', 'address' => '台南市安平區安平路', 'location' => ['lat' => 22.9980, 'lng' => 120.1600], 'stay_time' => '90 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+                '2' => [
+                    ['name' => '武廟周邊小吃街', 'address' => '台南市中西區永福路二段229巷', 'location' => ['lat' => 23.0010, 'lng' => 120.2030], 'stay_time' => '90 分鐘', 'cost_estimate' => '$250', 'travel_time' => '步行 15 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '大菜市（西門市場）', 'address' => '台南市中西區西門路二段', 'location' => ['lat' => 23.0026, 'lng' => 120.2065], 'stay_time' => '60 分鐘', 'cost_estimate' => '$150', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '保安路小吃一條街', 'address' => '台南市中西區保安路', 'location' => ['lat' => 22.9960, 'lng' => 120.2040], 'stay_time' => '60 分鐘', 'cost_estimate' => '$200', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                ],
+                '3' => [
+                    ['name' => '安平豆花', 'address' => '台南市安平區效忠街', 'location' => ['lat' => 22.9966, 'lng' => 120.1635], 'stay_time' => '45 分鐘', 'cost_estimate' => '$50', 'travel_time' => '開車 10 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '旗魚黑輪（海安路）', 'address' => '台南市中西區海安路一段', 'location' => ['lat' => 23.0063, 'lng' => 120.1987], 'stay_time' => '30 分鐘', 'cost_estimate' => '$80', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $food->id,
+            'title' => '基隆海鮮夜市攻略',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '基隆廟口夜市', 'address' => '基隆市仁愛區仁三路', 'location' => ['lat' => 25.1270, 'lng' => 121.7420], 'stay_time' => '120 分鐘', 'cost_estimate' => '$400', 'travel_time' => '步行 5 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '崁仔頂魚市', 'address' => '基隆市仁愛區孝一路', 'location' => ['lat' => 25.1290, 'lng' => 121.7400], 'stay_time' => '60 分鐘', 'cost_estimate' => '$300', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '正濱漁港', 'address' => '基隆市中正區正濱路', 'location' => ['lat' => 25.1400, 'lng' => 121.7770], 'stay_time' => '60 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $food->id,
+            'title' => '台北雙夜市挑戰',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '士林夜市', 'address' => '台北市士林區基河路101號', 'location' => ['lat' => 25.0879, 'lng' => 121.5240], 'stay_time' => '120 分鐘', 'cost_estimate' => '$350', 'travel_time' => '捷運 30 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '寧夏夜市', 'address' => '台北市大同區寧夏路', 'location' => ['lat' => 25.0555, 'lng' => 121.5169], 'stay_time' => '90 分鐘', 'cost_estimate' => '$250', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '饒河夜市', 'address' => '台北市松山區八德路四段', 'location' => ['lat' => 25.0506, 'lng' => 121.5776], 'stay_time' => '90 分鐘', 'cost_estimate' => '$250', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        $culture = User::firstOrCreate(
+            ['email' => 'culture@demo.com'],
+            ['name' => '文化藝術家', 'password' => Hash::make('demo1234')]
+        );
+        Trip::where('user_id', $culture->id)->delete();
+
+        Trip::create([
+            'user_id' => $culture->id,
+            'title' => '台北藝文深度路線',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '國立故宮博物院', 'address' => '台北市士林區至善路二段221號', 'location' => ['lat' => 25.1022, 'lng' => 121.5485], 'stay_time' => '180 分鐘', 'cost_estimate' => '$350', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '台北當代藝術館', 'address' => '台北市大同區長安西路39號', 'location' => ['lat' => 25.0490, 'lng' => 121.5161], 'stay_time' => '90 分鐘', 'cost_estimate' => '$50', 'travel_time' => '捷運 25 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '松山文創園區', 'address' => '台北市信義區光復南路133號', 'location' => ['lat' => 25.0440, 'lng' => 121.5590], 'stay_time' => '120 分鐘', 'cost_estimate' => '$0', 'travel_time' => '捷運 15 分鐘', 'travel_mode' => 'TRANSIT'],
+                ],
+                '2' => [
+                    ['name' => '國立台灣博物館', 'address' => '台北市中正區襄陽路2號', 'location' => ['lat' => 25.0440, 'lng' => 121.5120], 'stay_time' => '90 分鐘', 'cost_estimate' => '$30', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '迪化街', 'address' => '台北市大同區迪化街一段', 'location' => ['lat' => 25.0580, 'lng' => 121.5097], 'stay_time' => '90 分鐘', 'cost_estimate' => '$200', 'travel_time' => '步行 20 分鐘', 'travel_mode' => 'WALKING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $culture->id,
+            'title' => '台南古蹟文化深度遊',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '赤崁樓', 'address' => '台南市中西區民族路二段212號', 'location' => ['lat' => 23.0000, 'lng' => 120.2012], 'stay_time' => '90 分鐘', 'cost_estimate' => '$100', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '台灣文學館', 'address' => '台南市中西區中正路1號', 'location' => ['lat' => 22.9960, 'lng' => 120.2030], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '安平古堡', 'address' => '台南市安平區國勝路82號', 'location' => ['lat' => 23.0008, 'lng' => 120.1618], 'stay_time' => '90 分鐘', 'cost_estimate' => '$80', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+                '2' => [
+                    ['name' => '奇美博物館', 'address' => '台南市仁德區文華路二段66號', 'location' => ['lat' => 22.9758, 'lng' => 120.2547], 'stay_time' => '180 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 20 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '億載金城', 'address' => '台南市安平區光州路3號', 'location' => ['lat' => 22.9890, 'lng' => 120.1530], 'stay_time' => '60 分鐘', 'cost_estimate' => '$50', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $culture->id,
+            'title' => '台中文青藝術路線',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '國立台灣美術館', 'address' => '台中市西區五權西路一段2號', 'location' => ['lat' => 24.1418, 'lng' => 120.6765], 'stay_time' => '120 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 20 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '審計新村', 'address' => '台中市西區民生路368-1號', 'location' => ['lat' => 24.1464, 'lng' => 120.6728], 'stay_time' => '90 分鐘', 'cost_estimate' => '$150', 'travel_time' => '步行 15 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '台中文化創意產業園區', 'address' => '台中市南區復興路三段362號', 'location' => ['lat' => 24.1337, 'lng' => 120.6865], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        // ── 版本 C：空帳號（提示詞完整度展示用）────────────────
+
+        $newuser = User::firstOrCreate(
+            ['email' => 'newuser@demo.com'],
+            ['name' => '新手旅人', 'password' => Hash::make('demo1234')]
+        );
+        Trip::where('user_id', $newuser->id)->delete();
+
+        // ── 版本 D：自然療癒型 vs 都市輕旅型 ──────────────────
+
+        $nature = User::firstOrCreate(
+            ['email' => 'nature@demo.com'],
+            ['name' => '自然療癒者', 'password' => Hash::make('demo1234')]
+        );
+        Trip::where('user_id', $nature->id)->delete();
+
+        Trip::create([
+            'user_id' => $nature->id,
+            'title' => '烏來瀑布溫泉秘境',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '烏來瀑布', 'address' => '新北市烏來區烏來里瀑布路', 'location' => ['lat' => 24.8697, 'lng' => 121.5539], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '步行 20 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '內洞森林遊樂區', 'address' => '新北市烏來區孝義里信賢', 'location' => ['lat' => 24.8554, 'lng' => 121.5472], 'stay_time' => '120 分鐘', 'cost_estimate' => '$65', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '烏來老街溫泉', 'address' => '新北市烏來區烏來街', 'location' => ['lat' => 24.8670, 'lng' => 121.5561], 'stay_time' => '90 分鐘', 'cost_estimate' => '$300', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $nature->id,
+            'title' => '宜蘭溫泉湖泊療癒之旅',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '礁溪溫泉', 'address' => '宜蘭縣礁溪鄉德陽路', 'location' => ['lat' => 24.8195, 'lng' => 121.7710], 'stay_time' => '120 分鐘', 'cost_estimate' => '$400', 'travel_time' => '開車 60 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '梅花湖', 'address' => '宜蘭縣冬山鄉大埤路150號', 'location' => ['lat' => 24.7128, 'lng' => 121.7943], 'stay_time' => '90 分鐘', 'cost_estimate' => '$150', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+                '2' => [
+                    ['name' => '明池森林遊樂區', 'address' => '宜蘭縣大同鄉明池', 'location' => ['lat' => 24.6333, 'lng' => 121.5500], 'stay_time' => '180 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 60 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '棲蘭森林遊樂區', 'address' => '宜蘭縣大同鄉棲蘭路', 'location' => ['lat' => 24.6550, 'lng' => 121.5330], 'stay_time' => '120 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $nature->id,
+            'title' => '苗栗農場草莓慢活',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '飛牛牧場', 'address' => '苗栗縣通霄鎮南和里中山路168號', 'location' => ['lat' => 24.3497, 'lng' => 120.7064], 'stay_time' => '180 分鐘', 'cost_estimate' => '$300', 'travel_time' => '開車 60 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '大湖草莓觀光果園', 'address' => '苗栗縣大湖鄉大湖路', 'location' => ['lat' => 24.4216, 'lng' => 120.8544], 'stay_time' => '90 分鐘', 'cost_estimate' => '$250', 'travel_time' => '開車 40 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '明德水庫', 'address' => '苗栗縣頭屋鄉明德村', 'location' => ['lat' => 24.5041, 'lng' => 120.8214], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        $city = User::firstOrCreate(
+            ['email' => 'city@demo.com'],
+            ['name' => '都市輕旅人', 'password' => Hash::make('demo1234')]
+        );
+        Trip::where('user_id', $city->id)->delete();
+
+        Trip::create([
+            'user_id' => $city->id,
+            'title' => '台北城市娛樂周末',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '西門町', 'address' => '台北市萬華區西門路', 'location' => ['lat' => 25.0422, 'lng' => 121.5080], 'stay_time' => '120 分鐘', 'cost_estimate' => '$500', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '台北101觀景台', 'address' => '台北市信義區信義路五段7號', 'location' => ['lat' => 25.0338, 'lng' => 121.5645], 'stay_time' => '90 分鐘', 'cost_estimate' => '$600', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => 'ATT 4 FUN', 'address' => '台北市信義區松壽路12號', 'location' => ['lat' => 25.0378, 'lng' => 121.5680], 'stay_time' => '90 分鐘', 'cost_estimate' => '$400', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                ],
+                '2' => [
+                    ['name' => '微風廣場', 'address' => '台北市松山區復興南路一段39號', 'location' => ['lat' => 25.0478, 'lng' => 121.5440], 'stay_time' => '120 分鐘', 'cost_estimate' => '$600', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '南西SOGO', 'address' => '台北市中山區南京西路8號', 'location' => ['lat' => 25.0524, 'lng' => 121.5254], 'stay_time' => '90 分鐘', 'cost_estimate' => '$500', 'travel_time' => '捷運 15 分鐘', 'travel_mode' => 'TRANSIT'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $city->id,
+            'title' => '高雄都市探索兩日遊',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '夢時代購物中心', 'address' => '高雄市前鎮區中華五路789號', 'location' => ['lat' => 22.5950, 'lng' => 120.3007], 'stay_time' => '150 分鐘', 'cost_estimate' => '$600', 'travel_time' => '捷運 30 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '三多商圈', 'address' => '高雄市苓雅區三多三路', 'location' => ['lat' => 22.6178, 'lng' => 120.3028], 'stay_time' => '90 分鐘', 'cost_estimate' => '$400', 'travel_time' => '捷運 15 分鐘', 'travel_mode' => 'TRANSIT'],
+                    ['name' => '六合夜市', 'address' => '高雄市新興區六合二路', 'location' => ['lat' => 22.6264, 'lng' => 120.3026], 'stay_time' => '90 分鐘', 'cost_estimate' => '$300', 'travel_time' => '捷運 10 分鐘', 'travel_mode' => 'TRANSIT'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
+        Trip::create([
+            'user_id' => $city->id,
+            'title' => '台中購物潮遊',
+            'itinerary_data' => [
+                '1' => [
+                    ['name' => '勤美草悟道', 'address' => '台中市西區公益路與英才路口', 'location' => ['lat' => 24.1490, 'lng' => 120.6695], 'stay_time' => '90 分鐘', 'cost_estimate' => '$300', 'travel_time' => '開車 20 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '廣三SOGO', 'address' => '台中市西區台灣大道二段321號', 'location' => ['lat' => 24.1482, 'lng' => 120.6682], 'stay_time' => '120 分鐘', 'cost_estimate' => '$500', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => 'Tiger City老虎城', 'address' => '台中市西屯區河南路三段258號', 'location' => ['lat' => 24.1580, 'lng' => 120.6640], 'stay_time' => '90 分鐘', 'cost_estimate' => '$400', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+            ],
+            'chat_history' => [],
+        ]);
+
         $this->command->info('PresentationSeeder 完成！lm@gmail.com（山岳）& ls@gmail.com（海岸），密碼皆為 demo1234。');
     }
 }
