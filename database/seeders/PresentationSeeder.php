@@ -107,17 +107,22 @@ class PresentationSeeder extends Seeder
 
         Trip::create([
             'user_id' => $ls->id,
-            'title' => '北台灣寺廟巡禮',
+            'title' => '北海岸絕景三日遊',
             'itinerary_data' => [
                 '1' => [
-                    ['name' => '行天宮', 'address' => '台北市中山區民權東路二段109號', 'location' => ['lat' => 25.0621, 'lng' => 121.5336], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '捷運 20 分鐘', 'travel_mode' => 'TRANSIT'],
-                    ['name' => '艋舺龍山寺', 'address' => '台北市萬華區廣州街211號', 'location' => ['lat' => 25.0373, 'lng' => 121.4997], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '捷運 25 分鐘', 'travel_mode' => 'TRANSIT'],
-                    ['name' => '指南宮', 'address' => '台北市文山區萬壽路115號', 'location' => ['lat' => 24.9841, 'lng' => 121.5805], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '野柳地質公園', 'address' => '新北市萬里區野柳里港東路167-1號', 'location' => ['lat' => 25.2047, 'lng' => 121.6900], 'stay_time' => '120 分鐘', 'cost_estimate' => '$80', 'travel_time' => '開車 50 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '老梅綠石槽', 'address' => '新北市石門區老梅里老梅街', 'location' => ['lat' => 25.2900, 'lng' => 121.5530], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 25 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '富貴角燈塔', 'address' => '新北市石門區富基里', 'location' => ['lat' => 25.3010, 'lng' => 121.5380], 'stay_time' => '45 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 10 分鐘', 'travel_mode' => 'DRIVING'],
                 ],
                 '2' => [
-                    ['name' => '淡水鄞山寺', 'address' => '新北市淡水區鄞山街14號', 'location' => ['lat' => 25.1680, 'lng' => 121.4439], 'stay_time' => '45 分鐘', 'cost_estimate' => '$0', 'travel_time' => '捷運 40 分鐘', 'travel_mode' => 'TRANSIT'],
-                    ['name' => '淡水漁人碼頭', 'address' => '新北市淡水區觀海路', 'location' => ['lat' => 25.1817, 'lng' => 121.4218], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '步行 20 分鐘', 'travel_mode' => 'WALKING'],
-                    ['name' => '淡水老街', 'address' => '新北市淡水區中正路', 'location' => ['lat' => 25.1706, 'lng' => 121.4382], 'stay_time' => '90 分鐘', 'cost_estimate' => '$200', 'travel_time' => '步行 15 分鐘', 'travel_mode' => 'WALKING'],
+                    ['name' => '鼻頭角步道', 'address' => '新北市瑞芳區鼻頭路', 'location' => ['lat' => 25.1280, 'lng' => 121.9220], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 60 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '龍洞灣海洋公園', 'address' => '新北市貢寮區龍洞街', 'location' => ['lat' => 25.1150, 'lng' => 121.9280], 'stay_time' => '120 分鐘', 'cost_estimate' => '$200', 'travel_time' => '開車 10 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '福隆海水浴場', 'address' => '新北市貢寮區福隆里興隆街', 'location' => ['lat' => 25.0240, 'lng' => 121.9440], 'stay_time' => '150 分鐘', 'cost_estimate' => '$100', 'travel_time' => '開車 20 分鐘', 'travel_mode' => 'DRIVING'],
+                ],
+                '3' => [
+                    ['name' => '外木山海灘', 'address' => '基隆市中山區外木山', 'location' => ['lat' => 25.1620, 'lng' => 121.7070], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 50 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '潮境公園', 'address' => '基隆市中正區北寧路369巷', 'location' => ['lat' => 25.1530, 'lng' => 121.7840], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 20 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '八斗子漁港', 'address' => '基隆市中正區八斗街', 'location' => ['lat' => 25.1470, 'lng' => 121.7900], 'stay_time' => '60 分鐘', 'cost_estimate' => '$200', 'travel_time' => '步行 10 分鐘', 'travel_mode' => 'WALKING'],
                 ],
             ],
             'chat_history' => [],
@@ -140,7 +145,7 @@ class PresentationSeeder extends Seeder
                 '3' => [
                     ['name' => '宜蘭南方澳漁港', 'address' => '宜蘭縣蘇澳鎮南方澳路', 'location' => ['lat' => 24.5975, 'lng' => 121.8440], 'stay_time' => '60 分鐘', 'cost_estimate' => '$300', 'travel_time' => '開車 120 分鐘', 'travel_mode' => 'DRIVING'],
                     ['name' => '宜蘭外澳沙灘', 'address' => '宜蘭縣頭城鎮濱海路五段', 'location' => ['lat' => 24.8381, 'lng' => 121.8339], 'stay_time' => '90 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 40 分鐘', 'travel_mode' => 'DRIVING'],
-                    ['name' => '南天宮媽祖廟', 'address' => '宜蘭縣蘇澳鎮南安路177號', 'location' => ['lat' => 24.5900, 'lng' => 121.8500], 'stay_time' => '45 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 30 分鐘', 'travel_mode' => 'DRIVING'],
+                    ['name' => '烏石港衝浪沙灘', 'address' => '宜蘭縣頭城鎮濱海路二段', 'location' => ['lat' => 24.8520, 'lng' => 121.8460], 'stay_time' => '60 分鐘', 'cost_estimate' => '$0', 'travel_time' => '開車 15 分鐘', 'travel_mode' => 'DRIVING'],
                 ],
             ],
             'chat_history' => [],
