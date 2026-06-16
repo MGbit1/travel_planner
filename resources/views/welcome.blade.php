@@ -1302,7 +1302,7 @@
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-70', 'cursor-not-allowed');
-                icon.className = "bi bi-magic";
+                icon.className = "bi bi-stars text-indigo-500";
                 btnText.innerText = "生成建議路線";
             }
         }
