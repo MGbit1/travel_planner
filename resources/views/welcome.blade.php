@@ -148,9 +148,12 @@
                 </div>
             </div>
 
+            {{-- 天數分頁：固定在側欄頂部，不隨內容捲動 --}}
+            <div class="px-4 pt-3 pb-2 bg-white border-b border-slate-100 shrink-0">
+                <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar" id="day-tabs-container"></div>
+            </div>
+
             <div class="flex-1 overflow-y-auto p-6 space-y-7 custom-scrollbar mobile-scroll-panel bg-slate-50/50">
-                
-                <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="day-tabs-container"></div>
 
                 <div class="space-y-2.5 relative">
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><i class="bi bi-search"></i> 探索地點</label>
@@ -269,7 +272,7 @@
         <div id="map-wrapper" class="order-1 md:order-2 flex-1 relative bg-slate-100 w-full h-[45%] md:h-full">
             <div id="map" class="w-full h-full"></div>
 
-            <button onclick="toggleTraffic()" class="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
+            <button onclick="toggleTraffic()" class="absolute top-4 right-4 md:top-4 md:right-4 bg-white/90 backdrop-blur px-3 py-2 md:px-4 md:py-2.5 rounded-xl shadow-sm z-10 text-[12px] font-semibold text-slate-700 hover:bg-white hover:shadow-md transition border border-slate-200 flex items-center gap-2">
                 <i class="bi bi-stoplights"></i> <span class="hidden sm:inline">即時路況</span>
             </button>
         </div>
@@ -333,7 +336,7 @@
         const colorPalette = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#14b8a6", "#f43f5e"];
 
         function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), { center: { lat: 24.162, lng: 120.640 }, zoom: 14, mapId: "4504f8b37365c3d0" });
+            map = new google.maps.Map(document.getElementById("map"), { center: { lat: 24.162, lng: 120.640 }, zoom: 14, mapId: "4504f8b37365c3d0", zoomControlOptions: { position: google.maps.ControlPosition.LEFT_BOTTOM }, fullscreenControl: false });
             service = new google.maps.places.PlacesService(map); geocoder = new google.maps.Geocoder(); directionsService = new google.maps.DirectionsService();
             trafficLayer = new google.maps.TrafficLayer();
             
