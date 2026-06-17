@@ -807,73 +807,73 @@
             }
         }
 
-        async function smartOptimizeRoute() {
+        function smartOptimizeRoute() {
             const currentItinerary = itineraryData[currentDay] || [];
             if (currentItinerary.length < 3) return alert("行程太少，無需最佳化！");
-
-            let placesList = currentItinerary.map((p, index) => {
-                return `第 ${index + 1} 站：${p.name} ${p.isLocked ? '(此站順序【絕對不可變動】)' : ''}`;
-            }).join('\n');
-
-            let promptValue = `我已經選定了以下 ${currentItinerary.length} 個景點（依照目前順序）：\n${placesList}\n\n請發揮專業導遊的能力，根據「各景點最適合的日夜時間（如夜市/看夜景必須在晚上）」與「交通順路程度」幫我重新排序，找出最完美的走法。\n\n【嚴格約束條件】：\n1. 標示為【絕對不可變動】的景點，絕對不能改變它在清單中的順序！\n2. 請務必使用原景點名稱，不要新增或刪除。\n3. 給我排好的清單。`;
 
             const btn = document.getElementById('optimize-btn');
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
-            btn.innerHTML = `<i class="bi bi-arrow-repeat animate-spin"></i> 系統深度重排中...`;
+            btn.innerHTML = `<i class="bi bi-arrow-repeat animate-spin"></i> 最佳路線計算中...`;
 
-            try {
-                const response = await fetch('/ai-generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                    body: JSON.stringify({ prompt: promptValue, mode: currentMode, history: [], all_itineraries: {} })
-                });
+            // 分離鎖定與未鎖定景點（保留原始 index）
+            const lockedPositions = {};
+            const unlocked = [];
+            currentItinerary.forEach((point, i) => {
+                if (point.isLocked) lockedPositions[i] = point;
+                else unlocked.push({ point, originalIndex: i });
+            });
 
-                if (response.status === 401) { alert("🔒 請先登入才能使用 AI 功能！"); return; }
-                if (response.status === 419) { showAIError('頁面已過期，請重新整理後再試。'); return; }
-
-                const data = await response.json();
-
-                if (response.ok && data.status === 'success') {
-                    let newOrder = [];
-                    let unmatched = [...currentItinerary];
-                    
-                    let suggestions = data.days && data.days.length > 0 ? data.days[0].suggestions : (data.suggestions || []);
-
-                    suggestions.forEach(aiItem => {
-                        let matchIndex = unmatched.findIndex(p => aiItem.name.includes(p.name) || p.name.includes(aiItem.name) || aiItem.name === p.name);
-                        if (matchIndex !== -1) {
-                            const pt = unmatched[matchIndex];
-                            if (aiItem.transport_times) pt.transport_times = aiItem.transport_times;
-                            if (aiItem.stay_time) pt.stay_time_raw = aiItem.stay_time;
-                            if (aiItem.cost_estimate) pt.cost_estimate_raw = aiItem.cost_estimate;
-                            if (aiItem.reason) pt.reason_raw = aiItem.reason;
-                            pt.ai_description = rebuildAiDescription(pt, newOrder.length, currentMode);
-                            newOrder.push(unmatched[matchIndex]);
-                            unmatched.splice(matchIndex, 1);
-                        }
-                    });
-
-                    newOrder = newOrder.concat(unmatched);
-                    itineraryData[currentDay] = newOrder;
-                    
-                    updateUI(); 
-                    refreshMarkersOnly(); 
-                    calculateRoute();
-                    
-                    showAIError('✅ 最佳化完成！');
-                    setTimeout(() => document.getElementById('ai-error-banner')?.classList.add('hidden'), 2000);
-                } else {
-                    showAIError(data.message || '最佳化失敗，請稍後再試', data.retry_after || 0);
-                }
-            } catch (error) {
-                showAIError('連線異常，請確認網路後重試');
-            } finally {
+            if (unlocked.length < 2) {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 btn.innerHTML = originalText;
+                return alert("解鎖的景點需至少 2 個才能最佳化！");
             }
+
+            const origin = unlocked[0].point.location;
+            const destination = unlocked[unlocked.length - 1].point.location;
+            const midUnlocked = unlocked.slice(1, -1);
+            const waypoints = midUnlocked.map(u => ({ location: u.point.location, stopover: true }));
+
+            let optMode = (currentMode === 'TWO_WHEELER') ? 'DRIVING' : currentMode;
+
+            directionsService.route({
+                origin,
+                destination,
+                waypoints,
+                optimizeWaypoints: true,
+                travelMode: google.maps.TravelMode[optMode] || google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerHTML = originalText;
+
+                if (status !== 'OK') {
+                    showAIError('路線最佳化失敗，請稍後再試');
+                    return;
+                }
+
+                // 依 waypoint_order 重排未鎖定的中間景點
+                const waypointOrder = result.routes[0].waypoint_order;
+                const reorderedMid = waypointOrder.map(i => midUnlocked[i].point);
+                const reorderedUnlocked = [unlocked[0].point, ...reorderedMid, unlocked[unlocked.length - 1].point];
+
+                // 重建行程：鎖定景點回到原位，未鎖定景點依新順序填入
+                const newItinerary = [...currentItinerary];
+                let ui = 0;
+                for (let i = 0; i < newItinerary.length; i++) {
+                    if (!newItinerary[i].isLocked) newItinerary[i] = reorderedUnlocked[ui++];
+                }
+
+                itineraryData[currentDay] = newItinerary;
+                updateUI();
+                refreshMarkersOnly();
+                calculateRoute();
+                showAIError('✅ 最佳化完成！已依最短路徑重新排序。');
+                setTimeout(() => document.getElementById('ai-error-banner')?.classList.add('hidden'), 2500);
+            });
         }
 
         async function requestRouteByMode(origin, dest, mode) {
