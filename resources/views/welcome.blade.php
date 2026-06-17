@@ -476,7 +476,7 @@
                             let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
                             bounds.extend(realLocation);
                             hasPoints = true;
-                            return { ...point, location: realLocation };
+                            return { ...point, id: point.id || (Date.now() + Math.floor(Math.random() * 1000000)), location: realLocation };
                         });
                     }
                     dayCount = maxDay;
