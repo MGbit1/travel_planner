@@ -421,7 +421,7 @@
                 
                 itineraryData[dayNum] = loadedTripJson[dayStr].map(point => {
                     if (!point.location?.lat || !point.location?.lng) {
-                        return { ...point, location: null };
+                        return { ...point, id: Date.now() + Math.floor(Math.random() * 1000000), location: null };
                     }
                     let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
                     bounds.extend(realLocation);
@@ -429,6 +429,7 @@
 
                     return {
                         ...point,
+                        id: Date.now() + Math.floor(Math.random() * 1000000),
                         location: realLocation
                     };
                 });
