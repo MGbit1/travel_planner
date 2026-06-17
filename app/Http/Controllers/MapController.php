@@ -31,12 +31,10 @@ class MapController extends Controller
         $userPrompt = $request->input('prompt');
         $history = $request->input('history', []);
         $allItineraries = $request->input('all_itineraries', []);
-        $apiKeys = array_values(array_filter(array_map('trim', explode(',', env('GEMINI_API_KEYS', env('GEMINI_API_KEY'))))));
-
-
+        $apiKey = env('GEMINI_API_KEY');
         $currentDay = $request->input('current_day', 1);
 
-        if (empty($apiKeys)) {
+        if (empty($apiKey)) {
             return response()->json(['status' => 'error', 'message' => '系統找不到 API 金鑰，請確認 .env 設定！'], 500);
         }
 
@@ -135,48 +133,38 @@ class MapController extends Controller
             'parts' => [['text' => "使用者最新需求：「{$userPrompt}」\n\n【⚠️ 系統強制規則（請務必遵守）】：\n{$systemRules}"]]
         ];
 
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
         $response = null;
 
-        foreach ($apiKeys as $ki => $currentKey) {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={$currentKey}";
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(120)
+                    ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
+                    ->post($url, ['contents' => $contents]);
 
-            for ($attempt = 1; $attempt <= 3; $attempt++) {
-                try {
-                    $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                        ->withoutVerifying()
-                        ->timeout(120)
-                        ->withOptions(['curl' => [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4]])
-                        ->post($url, ['contents' => $contents]);
-
-                    if ($response->status() === 429) {
-                        \Log::warning("Gemini Key #{$ki} 配額超限，切換下一組", ['user_id' => auth()->id()]);
-                        break; // 換下一個 key
-                    }
-
-                    if ($response->status() === 503) {
-                        \Log::warning("Gemini 503（Key #{$ki}，第 {$attempt} 次）", ['user_id' => auth()->id()]);
-                        if ($attempt < 3) { sleep(2); continue; }
-                        break; // 換下一個 key
-                    }
-
-                    break 2; // 成功，跳出所有迴圈
-
-                } catch (\Exception $e) {
-                    if ($attempt === 3) {
-                        return response()->json([
-                            'status'  => 'error',
-                            'message' => '【本機系統崩潰】：' . $e->getMessage(),
-                        ], 500);
-                    }
-                    sleep(2);
+                if ($response->status() === 503) {
+                    if ($attempt < 3) { sleep(2); continue; }
                 }
+
+                break;
+
+            } catch (\Exception $e) {
+                if ($attempt === 3) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => '【本機系統崩潰】：' . $e->getMessage(),
+                    ], 500);
+                }
+                sleep(2);
             }
         }
 
         if (!$response || $response->status() === 429) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'AI 服務今日所有配額已用完，請明天再試。',
+                'message' => 'AI 服務配額已用完，請稍後再試。',
             ], 429);
         }
 
