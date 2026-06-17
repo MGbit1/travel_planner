@@ -473,6 +473,9 @@
                         if (dayNum > maxDay) maxDay = dayNum;
                         
                         itineraryData[dayNum] = parsed[dayStr].map(point => {
+                            if (!point.location?.lat || !point.location?.lng) {
+                                return { ...point, id: point.id || (Date.now() + Math.floor(Math.random() * 1000000)), location: null };
+                            }
                             let realLocation = new google.maps.LatLng(point.location.lat, point.location.lng);
                             bounds.extend(realLocation);
                             hasPoints = true;
@@ -666,8 +669,8 @@
             
             let autoParkingMode = isInternal ? 'INTERNAL' : 'EXTERNAL';
 
-            itineraryData[currentDay].push({ 
-                id: Date.now(), 
+            itineraryData[currentDay].push({
+                id: Date.now() + Math.floor(Math.random() * 1000000),
                 name: placeName, 
                 location: place.geometry.location, 
                 photo: place.photos ? place.photos[0].getUrl({ maxWidth: 400 }) : null, 
@@ -697,6 +700,7 @@
         function refreshMarkersOnly() {
             markers.forEach(m => m.setMap(null)); markers = []; const counts = {}; const currentItinerary = itineraryData[currentDay] || [];
             currentItinerary.forEach((p, index) => {
+                if (!p.location) return;
                 const key = `${p.location.lat().toFixed(6)},${p.location.lng().toFixed(6)}`; let lat = p.location.lat(), lng = p.location.lng();
                 if (counts[key]) { lat += (counts[key] * 0.00022); lng += (counts[key] * 0.00022); counts[key]++; } else { counts[key] = 1; }
                 const glyph = document.createElement('div'); glyph.className = 'bg-slate-800 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-[13px] shadow-sm border-2 border-white'; glyph.innerText = (index + 1).toString();
@@ -1304,7 +1308,7 @@
                 btn.disabled = false;
                 btn.classList.remove('opacity-70', 'cursor-not-allowed');
                 icon.className = "bi bi-stars text-indigo-500";
-                btnText.innerText = "生成建議路線";
+                btnText.innerText = "✦ 生成建議路線";
             }
         }
 
