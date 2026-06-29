@@ -11,6 +11,12 @@ class PresentationSeeder extends Seeder
 {
     public function run(): void
     {
+        // 已有展示帳號則跳過（避免 Render 冷啟動重複建立）
+        if (User::where('email', 'lm@gmail.com')->exists()) {
+            $this->command->info('PresentationSeeder: 展示資料已存在，跳過。');
+            return;
+        }
+
         // 山岳旅人
         $lm = User::firstOrCreate(
             ['email' => 'lm@gmail.com'],

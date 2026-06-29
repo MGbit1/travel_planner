@@ -14,7 +14,12 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        // 先刪除舊示範資料，確保每次部署圖片/內容都是最新版本
+        // 已有示範資料則跳過（避免 Render 冷啟動時重複建立，大幅縮短啟動時間）
+        if (User::where('email', 'user01@demo.com')->exists()) {
+            $this->command->info('DemoDataSeeder: 示範資料已存在，跳過。');
+            return;
+        }
+
         $demoEmails = array_map(fn($i) => sprintf('user%02d@demo.com', $i), range(1, 10));
         User::whereIn('email', $demoEmails)->delete();
 
